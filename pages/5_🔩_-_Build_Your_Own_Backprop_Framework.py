@@ -1952,5 +1952,5 @@ def page():
         st.markdown("---")
     func_list[page_dict[radio]]()
 
-if is_local or check_password():
-    page()
+# if is_local or check_password():
+page()

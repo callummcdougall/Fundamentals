@@ -144,5 +144,5 @@ Most of the blocks of code will also come with test functions. These are importe
 
 # Happy coding!
 
-if is_local or check_password():
-    page()
+# if is_local or check_password():
+page()

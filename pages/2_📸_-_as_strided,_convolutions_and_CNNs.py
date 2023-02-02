@@ -1083,5 +1083,5 @@ def check_password():
         # Password correct.
         return True
 
-if is_local or check_password():
-    page()
+# if is_local or check_password():
+page()
