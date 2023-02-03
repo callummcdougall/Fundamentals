@@ -314,7 +314,7 @@ def pad2d(x: t.Tensor, left: int, right: int, top: int, bottom: int, pad_value: 
     output[..., top : top + H, left : left + W] = x
     return output
 
-def conv1d(x, weights, stride: int = 1, padding: int = 0) -> t.Tensor:
+def conv1d(x: t.Tensor, weights: t.Tensor, stride: int = 1, padding: int = 0) -> t.Tensor:
     '''Like torch's conv1d using bias=False.
 
     x: shape (batch, in_channels, width)
@@ -357,7 +357,7 @@ def force_pair(v: IntOrPair) -> Pair:
     raise ValueError(v)
 
 
-def conv2d(x, weights, stride: IntOrPair = 1, padding: IntOrPair = 0) -> t.Tensor:
+def conv2d(x: t.Tensor, weights: t.Tensor, stride: IntOrPair = 1, padding: IntOrPair = 0) -> t.Tensor:
     '''Like torch's conv2d using bias=False
 
     x: shape (batch, in_channels, height, width)

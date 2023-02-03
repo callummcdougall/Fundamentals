@@ -824,8 +824,7 @@ Now try and turn this into a full function. Return to Hint1 if you're confused."
 
 2D convolutions are conceptually similar to 1D. The only difference is in how you move the kernel across the tensor as you take your convolution. In this case, you will be moving the tensor across two dimensions:
 """)
-    st_image('conv2d_illustration.png', width=540)
-    st.markdown("")
+    st_image('conv2d_illustration.png', width=420)
     st.markdown(r"""
 For this reason, 1D convolutions tend to be used for signals (e.g. audio), 2D convolutions are used for images, and 3D convolutions are used for 3D scans (e.g. in medical applications). 
 """)
@@ -923,6 +922,8 @@ if MAIN:
     tests.test_pad1d_multi_channel(pad1d)
 ```
 
+Once you've passed the tests, you can implement the 2D version:
+
 ```python
 
 def pad2d(x: t.Tensor, left: int, right: int, top: int, bottom: int, pad_value: float) -> t.Tensor:
@@ -980,7 +981,7 @@ Now, you'll extend `conv1d` to handle the `stride` and `padding` arguments.
 
 `stride` is the number of input positions that the kernel slides at each step. `padding` is the number of zeros concatenated to each side of the input before the convolution.
 
-Output shape should be (batch, output_channels, output_length), where output_length can be calculated as follows:
+Output shape should be `(batch, output_channels, output_length)`, where output_length can be calculated as follows:
 
 $$
 \text{output\_length} = \left\lfloor\frac{\text{input\_length} + 2 \times \text{padding} - \text{kernel\_size}}{\text{stride}} \right\rfloor + 1
@@ -989,17 +990,12 @@ $$
 Verify for yourself that the forumla above simplifies to the formula we used earlier when padding is 0 and stride is 1.
 
 Docs for pytorch's `conv1d` can be found [here](https://pytorch.org/docs/stable/generated/torch.nn.Conv1d.html).""")
-
-    with st.expander("Hint"):
-        st.markdown(r"""Each step of the kernel inside the input tensor, you're moving by `stride` elements rather than just 1 element.
-        
-So when creating `x_strided`, you should change the `stride` argument at the positions corresponding to the movement of the kernel inside `x`, so that you're jumping over `stride` elements rather than 1.
-
-You will also need a new `output_width` (use the formula in the documentation).""")
-
+    with st.columns(1)[0]:
         st.markdown(r"""
+#### Exercise - implement `conv1d`
+
 ```python
-def conv1d(x, weights, stride: int = 1, padding: int = 0) -> t.Tensor:
+def conv1d(x: t.Tensor, weights: t.Tensor, stride: int = 1, padding: int = 0) -> t.Tensor:
     '''Like torch's conv1d using bias=False.
 
     x: shape (batch, in_channels, width)
@@ -1009,7 +1005,48 @@ def conv1d(x, weights, stride: int = 1, padding: int = 0) -> t.Tensor:
     '''
     pass
 
-tests.test_conv1d(conv1d)
+
+if MAIN:
+    tests.test_conv1d(conv1d)
+```
+""")
+        with st.expander("Hint"):
+            st.markdown(r"""Each step of the kernel inside the input tensor, you're moving by `stride` elements rather than just 1 element.
+        
+So when creating `x_strided`, you should change the `stride` argument at the positions corresponding to the movement of the kernel inside `x`, so that you're jumping over `stride` elements rather than 1.
+
+You will also need a new `output_width` (use the formula in the documentation).""")
+        with st.expander("Solution"):
+            st.markdown(r"""
+```python
+def conv1d(x: t.Tensor, weights: t.Tensor, stride: int = 1, padding: int = 0) -> t.Tensor:
+    '''Like torch's conv1d using bias=False.
+
+    x: shape (batch, in_channels, width)
+    weights: shape (out_channels, in_channels, kernel_width)
+
+    Returns: shape (batch, out_channels, output_width)
+    '''
+    
+    x_padded = pad1d(x, left=padding, right=padding, pad_value=0)
+    
+    batch, in_channels, width = x_padded.shape
+    out_channels, in_channels_2, kernel_width = weights.shape
+    assert in_channels == in_channels_2, "in_channels for x and weights don't match up"
+    output_width = 1 + (width - kernel_width) // stride
+    # note, we assume padding is zero in the formula here, because we're working with input which has already been padded
+    
+    xsB, xsI, xsWi = x_padded.stride()
+    wsO, wsI, wsW = weights.stride()
+    
+    x_new_shape = (batch, in_channels, output_width, kernel_width)
+    x_new_stride = (xsB, xsI, xsWi * stride, xsWi)
+    # Explanation for line above:
+    #     we need to multiply the stride corresponding to the `output_width` dimension
+    #     because this is the dimension that we're sliding the kernel along
+    x_strided = x_padded.as_strided(size=x_new_shape, stride=x_new_stride)
+    
+    return einsum("B IC OW wW, OC IC wW -> B OC OW", x_strided, weights)
 ```
 """)
 
@@ -1042,7 +1079,7 @@ def force_pair(v: IntOrPair) -> Pair:
 Finally, you can implement a full version of `conv2d`. If you've done the full version of `conv1d`, and you've done `conv2d_minimal`, then this shouldn't be too much trouble.
 
 ```python
-def conv2d(x, weights, stride: IntOrPair = 1, padding: IntOrPair = 0) -> t.Tensor:
+def conv2d(x: t.Tensor, weights: t.Tensor, stride: IntOrPair = 1, padding: IntOrPair = 0) -> t.Tensor:
     '''Like torch's conv2d using bias=False
 
     x: shape (batch, in_channels, height, width)
@@ -1052,14 +1089,16 @@ def conv2d(x, weights, stride: IntOrPair = 1, padding: IntOrPair = 0) -> t.Tenso
     Returns: shape (batch, out_channels, output_height, output_width)
     '''
     pass
-    
-tests.test_conv2d(conv2d)
+
+
+if MAIN:
+    tests.test_conv2d(conv2d)
 ```
 """)
         with st.expander("Solution"):
             st.markdown(r"""
 ```python
-def conv2d(x, weights, stride: IntOrPair = 1, padding: IntOrPair = 0) -> t.Tensor:
+def conv2d(x: t.Tensor, weights: t.Tensor, stride: IntOrPair = 1, padding: IntOrPair = 0) -> t.Tensor:
     '''Like torch's conv2d using bias=False
 
     x: shape (batch, in_channels, height, width)
@@ -1439,6 +1478,8 @@ The name for this is **Xavier (uniform) initialisation**.""")
         st.markdown(r"""
 #### Exercise - implement `nn.Linear`
 
+Remember, you should define the weights (and bias, if appropriate) in the `__init__` block. Also, make sure not to mix up `bias` (which is the boolean parameter to `__init__`) and `self.bias` (which should either be the actual bias tensor, or `None` if `bias` is false).
+
 ```python
 class Linear(nn.Module):
     def __init__(self, in_features: int, out_features: int, bias=True):
@@ -1520,6 +1561,8 @@ Finally, we'll implement a module version of our `conv2d` function. This should 
 
     with st.columns(1)[0]:
         st.markdown(r"""
+#### Exercise - implement the `Conv2d` module
+
 ```python
 class Conv2d(nn.Module):
     def __init__(
