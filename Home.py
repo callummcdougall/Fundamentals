@@ -72,11 +72,11 @@ st.sidebar.markdown("""
 
 def page():
     st_image('prereqs.png', width=600)
-    st.markdown("""
+    st.markdown(r"""
 
-# ARENA: Prerequisites
+# Chapter 1: Fundamentals
 
-Before embarking on this curriculum, it is necessary to understand the basics of deep learning, including basic machine learning terminology, what neural networks are, and how to train them.
+The material on this page covers the first five days of the curriculum. It can be seen as a grounding in all the fundamentals necessary to complete the more advanced sections of this course (such as RL, transformers, mechanistic interpretability, and generative models).
 
 Some highlights from this chapter include:
 * Building your own 1D and 2D convolution functions
@@ -88,15 +88,16 @@ Some highlights from this chapter include:
 
 ## About this page
 
-This page was made using an app called Streamlit. It's hosted from the [ARENA GitHub repo](https://github.com/callummcdougall/arena-v1-streamlit). It provides a very simple way to display markdown, as well as more advanced features like interactive plots and animations. This is how the instructions for each day will be presented. You may also want to learn Streamlit in order to have a convenient way to present the results of your personal projects at the end of each week.
+This page was made using an app called Streamlit. It's hosted from the prerequisite materials [GitHub repo](https://github.com/callummcdougall/Prerequisite-materials). It provides a very simple way to display markdown, as well as more advanced features like interactive plots and animations. This is how the instructions for each day will be presented.
 
-On the left, you can see a sidebar (or if it's collapsed, you will be able to see if you click on the small arrow in the top-left to expand it). This sidebar should show a page called `Home` (which is the page you're currently reading), as well as one for each of the different parts of today's exercises.""")
-
-    st.info("""
-Note - these exercises form different sections of the day, rather than corresponding to different days. At the start of each exercise, I've included an estimated completion time. This should be taken with a pinch of salt (you might prefer to go at different speeds, or be more/less comfortable with certain sections). But if you find yourself going well outside this estimate, then it's probably a sign that you should be more willing to ask for help (either by sending a message in the `#technical-questions` Slack, or sending a direct message to Callum).
+On the left, you can see a sidebar (or if it's collapsed, you will be able to see if you click on the small arrow in the top-left to expand it). This sidebar should show a page called `Home` (which is the page you're currently reading), as well as one for each of the different parts of today's exercises.
 """)
 
-    st.markdown("""If you want to change to dark mode, you can do this by clicking the three horizontal lines in the top-right, then navigating to Settings → Theme.
+    st.info(r"""
+Note - these exercises form different sections of the day, rather than corresponding to different days. At the start of each exercise, I've included an estimated completion time. This should be taken with a pinch of salt (you might prefer to go at different speeds, or be more/less comfortable with certain sections). But if you find yourself going well outside this estimate, then it's probably a sign that you should be more willing to ask for help (either by sending a message in the `#technical-questions` Slack, or asking any TAs who are present).
+""")
+
+    st.markdown(r"""If you want to change to dark mode, you can do this by clicking the three horizontal lines in the top-right, then navigating to Settings → Theme.
 
 ## About this repo
 
