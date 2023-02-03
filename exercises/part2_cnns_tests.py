@@ -93,10 +93,10 @@ def test_conv1d_minimal(conv1d_minimal, n_tests=20):
     print("All tests in `test_conv1d_minimal` passed!")
 
 def test_conv2d_minimal(conv2d_minimal, n_tests=4):
-    """
+    '''
     Compare against torch.conv2d.
     Due to floating point rounding, they can be quite different in float32 but should be nearly identical in float64.
-    """
+    '''
     import numpy as np
     for i in range(n_tests):
         b = np.random.randint(1, 10)
@@ -130,7 +130,7 @@ def test_conv1d(conv1d, n_tests=10):
     print("All tests in `test_conv1d` passed!")
 
 def test_pad1d(pad1d):
-    """Should work with one channel of width 4."""
+    '''Should work with one channel of width 4.'''
     x = t.arange(4).float().view((1, 1, 4))
     actual = pad1d(x, 1, 3, -2.0)
     expected = t.tensor([[[-2.0, 0.0, 1.0, 2.0, 3.0, -2.0, -2.0, -2.0]]])
@@ -139,7 +139,7 @@ def test_pad1d(pad1d):
 
 
 def test_pad1d_multi_channel(pad1d):
-    """Should work with two channels of width 2."""
+    '''Should work with two channels of width 2.'''
     x = t.arange(4).float().view((1, 2, 2))
     actual = pad1d(x, 0, 2, -3.0)
     expected = t.tensor([[[0.0, 1.0, -3.0, -3.0], [2.0, 3.0, -3.0, -3.0]]])
@@ -147,7 +147,7 @@ def test_pad1d_multi_channel(pad1d):
     print("All tests in `test_pad1d_multi_channel` passed!")
 
 def test_pad2d(pad2d):
-    """Should work with one channel of 2x2."""
+    '''Should work with one channel of 2x2.'''
     x = t.arange(4).float().view((1, 1, 2, 2))
     expected = t.tensor([[[
         [0.0, 0.0, 0.0],
@@ -163,7 +163,7 @@ def test_pad2d(pad2d):
     print("All tests in `test_pad2d` passed!")
 
 def test_pad2d_multi_channel(pad2d):
-    """Should work with two channels of 2x1."""
+    '''Should work with two channels of 2x1.'''
     x = t.arange(4).float().view((1, 2, 2, 1))
     expected = t.tensor([[[[-1.0, 0.0], [-1.0, 1.0], [-1.0, -1.0]], [[-1.0, 2.0], [-1.0, 3.0], [-1.0, -1.0]]]])
     actual = pad2d(x, 1, 0, 0, 1, -1.0)
@@ -242,9 +242,9 @@ def test_maxpool2d_module(MaxPool2d, n_tests=20):
     print("All tests in `test_maxpool2d_module` passed!")
 
 def test_conv2d_module(Conv2d, n_tests=5):
-    """
+    '''
     Your weight should be called 'weight' and have an appropriate number of elements.
-    """
+    '''
     m = Conv2d(4, 5, (3, 3))
     assert isinstance(m.weight, t.nn.parameter.Parameter), "Weight should be registered a parameter!"
     assert m.weight.nelement() == 4 * 5 * 3 * 3
@@ -281,7 +281,7 @@ def test_flatten(Flatten):
     print("All tests in `test_flatten` passed!")
 
 def test_linear_forward(Linear):
-    """Your Linear should produce identical results to torch.nn given identical parameters."""
+    '''Your Linear should produce identical results to torch.nn given identical parameters.'''
     x = t.rand((10, 512))
     yours = Linear(512, 64)
     assert yours.weight.shape == (64, 512), f"Linear layer weights have wrong shape: {yours.weight.shape}, expected shape = (64, 512)"

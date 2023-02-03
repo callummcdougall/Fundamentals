@@ -2,13 +2,13 @@ import plotly.express as px
 from einops import rearrange
 
 def display_array_as_img(img_array):
-    """
+    '''
     Displays a numpy array as an image
     
     Two options:
         img_array.shape = (height, width) -> interpreted as monochrome
         img_array.shape = (3, height, width) -> interpreted as RGB
-    """
+    '''
     shape = img_array.shape
     assert len(shape) == 2 or (shape[0] == 3 and len(shape) == 3), "Incorrect format (see docstring)"
     

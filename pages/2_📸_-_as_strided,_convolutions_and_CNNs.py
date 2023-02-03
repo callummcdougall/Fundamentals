@@ -30,7 +30,7 @@ fig_dict = st.session_state["fig_dict"]
 def section0():
     st_image("cnn.png", 350)
     st.markdown(r"""
-# as_strided, convolutions and CNNs
+# as_strided, Convolutions and CNNs
 
 ## 1️⃣ Einops and Einsum
 
@@ -70,6 +70,8 @@ def section1():
 """, unsafe_allow_html=True)
 
     st.markdown(r"""
+# Einops and Einsum
+
 ## Reading
 
 * Read about the benefits of the `einops` library [here](https://www.blopig.com/blog/2022/05/einops-powerful-library-for-tensor-operations-in-deep-learning/).
@@ -88,10 +90,12 @@ from typing import Union, Optional, Callable
 import torch as t
 import torchvision
 
-arr = np.load("numbers.npy")
-
 import part2_cnns_utils as utils
 import part2_cnns_tests as tests
+
+MAIN = __name__ == "__main__"
+
+arr = np.load("numbers.npy")
 ```
 
 `arr` is a 4D numpy array. The first axes corresponds to the number, and the next three axes are channels (i.e. RGB), height and width respectively. You have the function `utils.display_array_as_img` which takes in a numpy array and displays it as an image. There are two possible ways this function can be run:
@@ -111,7 +115,8 @@ produces the following output:""")
 
     st.markdown(r"""
 A series of images follow below, which have been created using `einops` functions performed on `arr`. You should work through these and try to produce each of the images yourself. This page also includes solutions, but you should only look at them after you've tried for at least five minutes.
-
+""")
+    st.error(r"""
 *Note - if you find you're comfortable with the first ~half of these, you can skip to later sections if you'd prefer, since these aren't particularly conceptually important.*
 """)
 
@@ -223,6 +228,8 @@ For instance, `np.einsum` could use a string like `"ij->i"` to mean "sum a singl
 
     with st.columns(1)[0]:
         st.markdown(r"""
+#### Exercise - implement basic functions using `einsum`
+
 In the following exercises, you'll write simple functions using `einsum` which replicate the functionality of standard NumPy functions: trace, matrix multiplication, inner and outer products. We've also included some test functions which you should run.
 
 ```python
@@ -256,17 +263,53 @@ def einsum_outer(vec1, vec2):
     '''
     pass
 
+
 if MAIN:
-tests.test_einsum_trace(einsum_trace)
-tests.test_einsum_mv(einsum_mv)
-tests.test_einsum_mm(einsum_mm)
-tests.test_einsum_inner(einsum_inner)
-tests.test_einsum_outer(einsum_outer)
+    tests.test_einsum_trace(einsum_trace)
+    tests.test_einsum_mv(einsum_mv)
+    tests.test_einsum_mm(einsum_mm)
+    tests.test_einsum_inner(einsum_inner)
+    tests.test_einsum_outer(einsum_outer)
 ```
 """)
 
         with st.expander("Help - I get 'TypeError: cannot use a string pattern on a bytes-like object'"):
             st.markdown(r"""This is probably because you have strings and arrays the wrong way round. In `einsum`, the string goes first and the arrays follow. This is because `einsum` accepts a variable number of arrays but only one string. `einops` functions only work on single arrays, so the array is the first argument for those functions.""")
+        
+        with st.expander("Solution"):
+            st.markdown(r"""
+```python
+def einsum_trace(mat: np.ndarray):
+    '''
+    Returns the same as `np.trace`.
+    '''
+    return einsum("i i", mat)
+
+def einsum_mv(mat: np.ndarray, vec: np.ndarray):
+    '''
+    Returns the same as `np.matmul`, when `mat` is a 2D array and `vec` is 1D.
+    '''
+    return einsum("i j, j -> i", mat, vec)
+
+def einsum_mm(mat1: np.ndarray, mat2: np.ndarray):
+    '''
+    Returns the same as `np.matmul`, when `mat1` and `mat2` are both 2D arrays.
+    '''
+    return einsum("i j, j k -> i k", mat1, mat2)
+
+def einsum_inner(vec1: np.ndarray, vec2: np.ndarray):
+    '''
+    Returns the same as `np.inner`.
+    '''
+    return einsum("i, i", vec1, vec2)
+
+def einsum_outer(vec1: np.ndarray, vec2: np.ndarray):
+    '''
+    Returns the same as `np.outer`.
+    '''
+    return einsum("i, j -> i j", vec1, vec2)
+```
+""")
 
 def section2():
     st.sidebar.markdown(r"""
@@ -280,6 +323,8 @@ def section2():
 """, unsafe_allow_html=True)
 
     st.markdown(r"""
+# Array strides
+
 ## Reading
 
 * [Python NumPy, 6.1 - `as_strided()`](https://www.youtube.com/watch?v=VlkzN00P0Bc) explains what array strides are.
@@ -290,7 +335,7 @@ def section2():
 
 Array strides, and the `as_strided` method, are important to understand well because lots of linear operations are actually implementing something like `as_strided` under the hood.
 
-Consider the following tensor:
+Run the following code, to define this tensor:
 
 ```python
 test_input = t.tensor(
@@ -324,40 +369,81 @@ TestCase = namedtuple("TestCase", ["output", "size", "stride"])
 test_cases = [
     TestCase(
         output=t.tensor([0, 1, 2, 3]), 
-        size=(4,), 
-        stride=(1,)),
-    TestCase(
-        output=t.tensor([0, 1, 2, 3, 4]), 
-        size=None, 
-        stride=None),
-    TestCase(
-        output=t.tensor([0, 5, 10, 15]), 
-        size=None, 
-        stride=None),
-    TestCase(
-        output=t.tensor([[0, 1, 2], [5, 6, 7]]), 
-        size=None, 
-        stride=None),
-    TestCase(
-        output=t.tensor([[0, 1, 2], [10, 11, 12]]), 
-        size=None, 
-        stride=None),
-    TestCase(
-        output=t.tensor([[0, 0, 0], [11, 11, 11]]), 
         size=None,
-        stride=None),    
+        stride=None
+    ),
+
+    TestCase(
+        output=t.tensor([0, 1, 2, 3, 4]),
+        size=None,
+        stride=None
+    ),
+
+    TestCase(
+        output=t.tensor([0, 5, 10, 15]),
+        size=None,
+        stride=None
+    ),
+
+    TestCase(
+        output=t.tensor([
+            [0, 1, 2], 
+            [5, 6, 7]
+        ]), 
+        size=None,
+        stride=None
+    ),
+
+    TestCase(
+        output=t.tensor([
+            [0, 1, 2], 
+            [10, 11, 12]
+        ]), 
+        size=None,
+        stride=None
+    ),
+
+    TestCase(
+        output=t.tensor([
+            [0, 0, 0], 
+            [11, 11, 11]
+        ]), 
+        size=None,
+        stride=None
+    ),
+
     TestCase(
         output=t.tensor([0, 6, 12, 18]), 
-        size=None, 
-        stride=None),
-    TestCase(
-        output=t.tensor(<code>0, 1, 2]], [[9, 10, 11</code>), 
-        size=None, 
-        stride=None),
-    TestCase(
-        output=t.tensor(<code>[0, 1], [2, 3]], [[4, 5], [6, 7</code>, <code>12, 13], [14, 15]], [[16, 17], [18, 19</code>]),
         size=None,
-        stride=None),
+        stride=None
+    ),
+
+    # Take note of the brackets in the next example!
+    TestCase(
+        output=t.tensor([
+            [[0, 1, 2]], 
+            [[9, 10, 11]]
+        ]), 
+        size=None,
+        stride=None
+    ),
+
+    TestCase(
+        output=t.tensor(
+            [
+                [
+                    [[0, 1], [2, 3]],
+                    [[4, 5], [6, 7]]
+                ], 
+                [
+                    [[12, 13], [14, 15]], 
+                    [[16, 17], [18, 19]]
+                ]
+            ]
+        ),
+        size=None,
+        stride=None
+    ),
 ]
 for (i, case) in enumerate(test_cases):
     if (case.size is None) or (case.stride is None):
@@ -370,6 +456,102 @@ for (i, case) in enumerate(test_cases):
             print(f"Actual: {actual}\n")
         else:
             print(f"Test {i} passed!\n")
+```
+""")
+        with st.expander("Solution"):
+            st.markdown(r"""
+```python
+test_cases = [
+    TestCase(
+        output=t.tensor([0, 1, 2, 3]), 
+        size=(4,),
+        stride=(1,)
+    ),
+    # Explanation: the output is a 1D vector of length 4 (hence size=(4,))
+    # and each time you move one element along in this output vector, you also want to move
+    # one element along the `test_input_a` tensor
+
+    TestCase(
+        output=t.tensor([0, 1, 2, 3, 4]),
+        size=(5,),
+        stride=(1,)
+    ),
+    # Explanation: the tensor is held in a contiguous memory block. When you get to the end
+    # of one row, a single stride jumps to the start of the next row
+
+    TestCase(
+        output=t.tensor([0, 5, 10, 15]),
+        size=(4,),
+        stride=(5,)
+    ),
+    # Explanation: this is same as previous case, only now you're moving in colspace (i.e. skipping
+    # 5 elements) each time you move one element across the output tensor.
+    # So stride is 5 rather than 1
+
+    TestCase(
+        output=t.tensor([
+            [0, 1, 2], 
+            [5, 6, 7]
+        ]), 
+        size=(2, 3),
+        stride=(5, 1)
+    ),
+    # Explanation: consider the output tensor. As you move one element along a row, you want to jump
+    # one element in the `test_input_a` (since you're just going to the next row). As you move
+    # one element along a column, you want to jump to the next column, i.e. a stride of 5.
+
+    TestCase(
+        output=t.tensor([
+            [0, 1, 2], 
+            [10, 11, 12]
+        ]), 
+        size=(2, 3),
+        stride=(10, 1)
+    ),
+
+    TestCase(
+        output=t.tensor([
+            [0, 0, 0], 
+            [11, 11, 11]
+        ]), 
+        size=(2, 3),
+        stride=(11, 0)
+    ),
+
+    TestCase(
+        output=t.tensor([0, 6, 12, 18]), 
+        size=(4,),
+        stride=(6,)
+    ),
+
+    TestCase(
+        output=t.tensor([
+            [[0, 1, 2]], 
+            [[9, 10, 11]]
+        ]), 
+        size=(2, 1, 3),
+        stride=(9, 0, 1)
+    ),
+    # Note here that the middle element of `stride` doesn't actually matter, since you never
+    # jump in this dimension. You could change it and the test result would still be the same
+
+    TestCase(
+        output=t.tensor(
+            [
+                [
+                    [[0, 1], [2, 3]],
+                    [[4, 5], [6, 7]]
+                ], 
+                [
+                    [[12, 13], [14, 15]], 
+                    [[16, 17], [18, 19]]
+                ]
+            ]
+        ),
+        size=(2, 2, 2, 2),
+        stride=(12, 4, 2, 1)
+    ),
+]
 ```
 """)
     st.markdown(r"""
@@ -388,12 +570,31 @@ def as_strided_trace(mat: t.Tensor) -> t.Tensor:
     '''
     pass
 
-tests.test_trace(as_strided_trace)
+
+if MAIN:
+    tests.test_trace(as_strided_trace)
 ```
 """)
 
         with st.expander("Hint"):
             st.markdown("The trace is the sum of all the elements you get from starting at `[0, 0]` and then continually stepping down and right one element. Use strides to create a 1D array which contains these elements.")
+        
+        with st.expander("Solution"):
+            st.markdown(r"""
+```python
+def as_strided_trace(mat: t.Tensor) -> t.Tensor:
+    '''
+    Returns the same as `torch.trace`, using only `as_strided` and `sum` methods.
+    '''
+    
+    stride = mat.stride()
+    
+    assert len(stride) == 2, f"matrix should have size 2"
+    assert mat.size(0) == mat.size(1), "matrix should be square"
+    
+    return mat.as_strided((mat.size(0),), (sum(stride),)).sum()
+```
+""")
 
     with st.columns(1)[0]:
         st.markdown(r"""
@@ -406,15 +607,17 @@ def as_strided_mv(mat: t.Tensor, vec: t.Tensor) -> t.Tensor:
     '''
     pass
 
-tests.test_mv(as_strided_mv)
-tests.test_mv2(as_strided_mv)
+
+if MAIN:
+    tests.test_mv(as_strided_mv)
+    tests.test_mv2(as_strided_mv)
 ```
 """)
 
         with st.expander("Hint 1"):
             st.markdown(r"""You want your output array to be as follows:
     
-```output[i] = sum_j { mat[i, j] * vec[j] }```
+```output[i] = sum_over_j ( mat[i, j] * vec[j] )```
 
 so first try to create an array with `arr[i, j] = mat[i, j] * vec[j]`, then we can sum over this to get our output.""")
 
@@ -423,6 +626,31 @@ so first try to create an array with `arr[i, j] = mat[i, j] * vec[j]`, then we c
 
         with st.expander("Help - I'm passing the first test, but failing the second."):
             st.markdown(r"""It's possible that the input matrices you recieve could themselves be the output of an `as_strided` operation, so that they're represented in memory in a non-contiguous way. Make sure that your `as_strided `operation is using the strides from the original input arrays, i.e. it's not just assuming the last element in the `stride()` tuple is 1.""")
+
+        with st.expander("Solution"):
+            st.markdown(r"""
+```python
+def as_strided_mv(mat: t.Tensor, vec: t.Tensor) -> t.Tensor:
+    '''
+    Returns the same as `torch.matmul`, using only `as_strided` and `sum` methods.
+    '''
+    
+    sizeM = mat.shape
+    sizeV = vec.shape
+    
+    strideM = mat.stride()
+    strideV = vec.stride()
+    
+    assert len(sizeM) == 2, f"mat1 should have size 2"
+    assert sizeM[1] == sizeV[0], f"mat{list(sizeM)}, vec{list(sizeV)} not compatible for multiplication"
+    
+    vec_expanded = vec.as_strided(mat.shape, (0, strideV[0]))
+    
+    product_expanded = mat * vec_expanded
+    
+    return product_expanded.sum(dim=1)
+```
+""")
 
     with st.columns(1)[0]:
         st.markdown(r"""
@@ -435,8 +663,10 @@ def as_strided_mm(matA: t.Tensor, matB: t.Tensor) -> t.Tensor:
     '''
     pass
 
-tests.test_mm(as_strided_mm)
-tests.test_mm2(as_strided_mm)
+
+if MAIN:
+    tests.test_mm(as_strided_mm)
+    tests.test_mm2(as_strided_mm)
 ```
 """)
 
@@ -444,9 +674,9 @@ tests.test_mm2(as_strided_mm)
             st.markdown(r"""
 If you did the first one, this isn't too dissimilar. We have:
 
-```output[i, k] = sum_j { matA[i, j] * matB[j, k] }```
+```output[i, k] = sum_over_j ( matA[i, j] * matB[j, k] )```
 
-so in this case, try to create an array with `arr[i, j, k] = matA[i, j] * matB[j, k]`.
+so in this case, try to create an array with `arr[i, j, k] = matA[i, j] * matB[j, k]`, and then sum this array over `j` to get `output`.
 
 We need to create expanded versions of both `matA` and `matB` in order to take this product.
 """)
@@ -455,6 +685,38 @@ We need to create expanded versions of both `matA` and `matB` in order to take t
             st.markdown(r"""We want `matA_expanded[i, j, k] = matA[i, j]`, so our stride for `matA should be `(matA.stride(0), matA.stride(1), 0)`.
         
 A similar idea applies for `matB`.""")
+
+        with st.expander("Solution"):
+            st.markdown(r"""
+```python
+def as_strided_mm(matA: t.Tensor, matB: t.Tensor) -> t.Tensor:
+    '''
+    Returns the same as `torch.matmul`, using only `as_strided` and `sum` methods.
+    '''
+    
+    assert len(matA.shape) == 2, f"mat1 should have size 2"
+    assert len(matB.shape) == 2, f"mat2 should have size 2"
+    assert matA.shape[1] == matB.shape[0], f"mat1{list(matA.shape)}, mat2{list(matB.shape)} not compatible for multiplication"
+    
+    # Get the matrix strides, and matrix dims
+    sA0, sA1 = matA.stride()
+    dA0, dA1 = matA.shape
+    sB0, sB1 = matB.stride()
+    dB0, dB1 = matB.shape
+    
+    expanded_size = (dA0, dA1, dB1)
+    
+    matA_expanded_stride = (sA0, sA1, 0)
+    matA_expanded = matA.as_strided(expanded_size, matA_expanded_stride)
+    
+    matB_expanded_stride = (0, sB0, sB1)
+    matB_expanded = matB.as_strided(expanded_size, matB_expanded_stride)
+    
+    product_expanded = matA_expanded * matB_expanded
+    
+    return product_expanded.sum(dim=1)
+```
+""")
 
 def section3():
     st.sidebar.markdown(r"""
@@ -518,6 +780,21 @@ A typical convolution operation is illustrated in the sketch below. Some notes o
 Below, you should implement `conv1d_minimal`. This is a function which works just like `conv1d`, but takes the default stride and padding values (these will be added back in later). You are allowed to use `as_strided` and `einsum`.
 
 This is intended to be pretty challenging, so we've provided several hints which you should work through in sequence if you get stuck.
+```python
+def conv1d_minimal(x: t.Tensor, weights: t.Tensor) -> t.Tensor:
+    '''Like torch's conv1d using bias=False and all other keyword arguments left at their default values.
+
+    x: shape (batch, in_channels, width)
+    weights: shape (out_channels, in_channels, kernel_width)
+
+    Returns: shape (batch, out_channels, output_width)
+    '''
+    pass
+
+
+if MAIN:
+    tests.test_conv1d_minimal(conv1d_minimal)
+```
 """)
 
         with st.expander("Hint 1"):
@@ -542,21 +819,6 @@ x_new_stride = (xsB, xsI, xsWi, xsWi)
 
 Now try and turn this into a full function. Return to Hint1 if you're confused.""")
 
-        st.markdown(r"""
-```python
-def conv1d_minimal(x: t.Tensor, weights: t.Tensor) -> t.Tensor:
-    '''Like torch's conv1d using bias=False and all other keyword arguments left at their default values.
-
-    x: shape (batch, in_channels, width)
-    weights: shape (out_channels, in_channels, kernel_width)
-
-    Returns: shape (batch, out_channels, output_width)
-    '''
-    pass
-    
-tests.test_conv1d_minimal(conv1d_minimal)
-```
-""")
     st.markdown(r"""
 ## conv2d minimal
 
@@ -572,17 +834,7 @@ For this reason, 1D convolutions tend to be used for signals (e.g. audio), 2D co
 #### Exercise - implement `conv2d_minimal`
 
 You should implement `conv2d` in a similar way to `conv1d`. Again, this is expected to be difficult and there are several hints you can go through.
-""")
 
-    with st.expander("Hint 1"):
-        st.markdown(r"""This is conceptually very similar to conv1d. You can start by copying your code from the conv1d function, but changing it whenever it refers to `width` (since you'll need to use `width` *and* `height`).""")
-
-    with st.expander("Hint 2"):
-        st.markdown(r"""The shape of `x_strided` should be `(batch, in_channels, output_height, output_width, kernel_height, kernel_width)`. 
-        
-Just like last time, some of these strides should just correspond to their equivalents in `x.stride()`, and you can work out the others by thinking about how the kernel is moved around inside `x`.""")
-
-        st.markdown(r"""
 ```python
 def conv2d_minimal(x: t.Tensor, weights: t.Tensor) -> t.Tensor:
     '''Like torch's conv2d using bias=False and all other keyword arguments left at their default values.
@@ -593,8 +845,53 @@ def conv2d_minimal(x: t.Tensor, weights: t.Tensor) -> t.Tensor:
     Returns: shape (batch, out_channels, output_height, output_width)
     '''
     pass
+
+
+if MAIN:
+    tests.test_conv2d_minimal(conv2d_minimal)
+```
+""")
+
+        with st.expander("Hint 1"):
+            st.markdown(r"""This is conceptually very similar to conv1d. You can start by copying your code from the conv1d function, but changing it whenever it refers to `width` (since you'll need to use `width` *and* `height`).""")
+
+        with st.expander("Hint 2"):
+            st.markdown(r"""The shape of `x_strided` should be `(batch, in_channels, output_height, output_width, kernel_height, kernel_width)`. 
+        
+Just like last time, some of these strides should just correspond to their equivalents in `x.stride()`, and you can work out the others by thinking about how the kernel is moved around inside `x`.""")
+
+        with st.expander("Solution"):
+            st.markdown(r"""
+```python
+def conv2d_minimal(x: t.Tensor, weights: t.Tensor) -> t.Tensor:
+    '''Like torch's conv2d using bias=False and all other keyword arguments left at their default values.
+
+    x: shape (batch, in_channels, height, width)
+    weights: shape (out_channels, in_channels, kernel_height, kernel_width)
+
+    Returns: shape (batch, out_channels, output_height, output_width)
+    '''
     
-tests.test_conv2d_minimal(conv2d_minimal)
+    batch, in_channels, height, width = x.shape
+    out_channels, in_channels_2, kernel_height, kernel_width = weights.shape
+    assert in_channels == in_channels_2, "in_channels for x and weights don't match up"
+    output_width = width - kernel_width + 1
+    output_height = height - kernel_height + 1
+    
+    xsB, xsIC, xsH, xsW = x.stride() # B for batch, IC for input channels, H for height, W for width
+    wsOC, wsIC, wsH, wsW = weights.stride()
+    
+    x_new_shape = (batch, in_channels, output_height, output_width, kernel_height, kernel_width)
+    x_new_stride = (xsB, xsIC, xsH, xsW, xsH, xsW)
+    
+    x_strided = x.as_strided(size=x_new_shape, stride=x_new_stride)
+    
+    return einsum(
+        "batch in_channels output_height output_width kernel_height kernel_width, \
+out_channels in_channels kernel_height kernel_width \
+-> batch out_channels output_height output_width",
+        x_strided, weights
+    )
 ```
 """)
     st.markdown(r"""
@@ -621,8 +918,9 @@ def pad1d(x: t.Tensor, left: int, right: int, pad_value: float) -> t.Tensor:
     pass
 
 
-tests.test_pad1d(pad1d)
-tests.test_pad1d_multi_channel(pad1d)
+if MAIN:
+    tests.test_pad1d(pad1d)
+    tests.test_pad1d_multi_channel(pad1d)
 ```
 
 ```python
@@ -636,8 +934,43 @@ def pad2d(x: t.Tensor, left: int, right: int, top: int, bottom: int, pad_value: 
     '''
     pass
 
-tests.test_pad2d(pad2d)
-tests.test_pad2d_multi_channel(pad2d)
+
+if MAIN:
+    tests.test_pad2d(pad2d)
+    tests.test_pad2d_multi_channel(pad2d)
+```
+""")
+        with st.expander("Solution (pad1d)"):
+            st.markdown(r"""
+```python
+def pad1d(x: t.Tensor, left: int, right: int, pad_value: float) -> t.Tensor:
+    '''Return a new tensor with padding applied to the edges.
+
+    x: shape (batch, in_channels, width), dtype float32
+
+    Return: shape (batch, in_channels, left + right + width)
+    '''
+    B, C, W = x.shape
+    output = x.new_full(size=(B, C, left + W + right), fill_value=pad_value)
+    output[..., left : left + W] = x
+    # Note - you can't use `left:-right`, because `right` could be zero.
+    return output
+    
+
+""")
+        with st.expander("Solution (pad2d)"):
+            st.markdown(r"""
+def pad2d(x: t.Tensor, left: int, right: int, top: int, bottom: int, pad_value: float) -> t.Tensor:
+    '''Return a new tensor with padding applied to the edges.
+
+    x: shape (batch, in_channels, height, width), dtype float32
+
+    Return: shape (batch, in_channels, top + height + bottom, left + width + right)
+    '''
+    B, C, H, W = x.shape
+    output = x.new_full(size=(B, C, top + H + bottom, left + W + right), fill_value=pad_value)
+    output[..., top : top + H, left : left + W] = x
+    return output
 ```
 """)
     st.markdown(r"""
@@ -723,6 +1056,41 @@ def conv2d(x, weights, stride: IntOrPair = 1, padding: IntOrPair = 0) -> t.Tenso
 tests.test_conv2d(conv2d)
 ```
 """)
+        with st.expander("Solution"):
+            st.markdown(r"""
+```python
+def conv2d(x, weights, stride: IntOrPair = 1, padding: IntOrPair = 0) -> t.Tensor:
+    '''Like torch's conv2d using bias=False
+
+    x: shape (batch, in_channels, height, width)
+    weights: shape (out_channels, in_channels, kernel_height, kernel_width)
+
+
+    Returns: shape (batch, out_channels, output_height, output_width)
+    '''
+
+    stride_h, stride_w = force_pair(stride)
+    padding_h, padding_w = force_pair(padding)
+    
+    x_padded = pad2d(x, left=padding_w, right=padding_w, top=padding_h, bottom=padding_h, pad_value=0)
+    
+    batch, in_channels, height, width = x_padded.shape
+    out_channels, in_channels_2, kernel_height, kernel_width = weights.shape
+    assert in_channels == in_channels_2, "in_channels for x and weights don't match up"
+    output_width = 1 + (width - kernel_width) // stride_w
+    output_height = 1 + (height - kernel_height) // stride_h
+    
+    xsB, xsIC, xsH, xsW = x_padded.stride() # B for batch, IC for input channels, H for height, W for width
+    wsOC, wsIC, wsH, wsW = weights.stride()
+    
+    x_new_shape = (batch, in_channels, output_height, output_width, kernel_height, kernel_width)
+    x_new_stride = (xsB, xsIC, xsH * stride_h, xsW * stride_w, xsH, xsW)
+    
+    x_strided = x_padded.as_strided(size=x_new_shape, stride=x_new_stride)
+    
+    return einsum("B IC OH OW wH wW, OC IC wH wW -> B OC OH OW", x_strided, weights)
+```
+""")
     st.markdown(r"""
 ## Max pooling
 
@@ -738,12 +1106,6 @@ The way multiple channels work is also different. A convolution has some number 
 
 Implement `maxpool2d` using `torch.as_strided` and `torch.amax` (= max over axes) together. Your version should behave the same as the PyTorch version, but only the indicated arguments need to be supported.""")
 
-        with st.expander("Hint"):
-            st.markdown(r"""Conceptually, this is similar to `conv2d`. 
-    
-In `conv2d`, you had to use `as_strided` to turn the 4D tensor `x` into a 6D tensor `x_strided` (adding dimensions over which you would take the convolution), then multiply this tensor by the kernel and sum over these two new dimensions.
-
-`maxpool2d` is the same, except that you're simply taking max over those dimensions rather than a dot product with the kernel. So you should find yourself able to reuse a lot of code from your `conv2d` function.""")
 
         st.markdown(r"""
 ```python
@@ -760,6 +1122,12 @@ def maxpool2d(x: t.Tensor, kernel_size: IntOrPair, stride: Optional[IntOrPair] =
 
 tests.test_maxpool2d(maxpool2d)
 ```""")
+        with st.expander("Hint"):
+            st.markdown(r"""Conceptually, this is similar to `conv2d`. 
+    
+In `conv2d`, you had to use `as_strided` to turn the 4D tensor `x` into a 6D tensor `x_strided` (adding dimensions over which you would take the convolution), then multiply this tensor by the kernel and sum over these two new dimensions.
+
+`maxpool2d` is the same, except that you're simply taking max over those dimensions rather than a dot product with the kernel. So you should find yourself able to reuse a lot of code from your `conv2d` function.""")
 
         with st.expander("Help - I'm getting a small number of mismatched elements each time (e.g. between 0 and 5%)."):
             st.markdown(r"""This is likely because you used an incorrect `pad_value`. In the convolution function, we set `pad_value=0` so these values wouldn't have any effect in the linear transformation. What pad value would make our padded elements "invisible" when we take the maximum?
@@ -769,6 +1137,43 @@ Click on the expander below to reveal the answer.""")
         with st.expander(r"""Click to reveal the answer to the question posed in the expander above this one."""):
             st.markdown("$$-\infty$$")
             # st.markdown(r"""<span style="background-color: #31333F">$$-\infty$$</span>""", unsafe_allow_html=True)
+
+        with st.expander("Solution"):
+            st.markdown(r"""
+```python
+def maxpool2d(x: t.Tensor, kernel_size: IntOrPair, stride: Optional[IntOrPair] = None, padding: IntOrPair = 0
+) -> t.Tensor:
+    '''Like PyTorch's maxpool2d.
+
+    x: shape (batch, channels, height, width)
+    stride: if None, should be equal to the kernel size
+
+    Return: (batch, channels, output_height, output_width)
+    '''
+
+    if stride is None:
+        stride = kernel_size
+    stride_height, stride_width = force_pair(stride)
+    padding_height, padding_width = force_pair(padding)
+    kernel_height, kernel_width = force_pair(kernel_size)
+    
+    x_padded = pad2d(x, left=padding_width, right=padding_width, top=padding_height, bottom=padding_height, pad_value=-t.inf)
+    
+    batch, channels, height, width = x_padded.shape
+    output_width = 1 + (width - kernel_width) // stride_width
+    output_height = 1 + (height - kernel_height) // stride_height
+    
+    xsB, xsC, xsH, xsW = x_padded.stride()
+    
+    x_new_shape = (batch, channels, output_height, output_width, kernel_height, kernel_width)
+    x_new_stride = (xsB, xsC, xsH * stride_height, xsW * stride_width, xsH, xsW)
+    
+    x_strided = x_padded.as_strided(size=x_new_shape, stride=x_new_stride)
+    
+    output = t.amax(x_strided, dim=(-1, -2))
+    return output
+```
+""")
 
 def section4():
     st.sidebar.markdown(r"""
@@ -846,10 +1251,14 @@ def __init__(self, weights: t.Tensor, biases: t.Tensor):
 Although the code above covers all the essential parts of creating a module, we will add one more method: `extra_repr`. This sets the extra representation of a module - in other words, if you have a module `class MyModule(nn.Module)`, then when you print an instance of this module, it will return the (formatted) string `f"MyModule({extra_repr})"`. You might want to take this opportunity to print out useful invariant information about the module (e.g. `kernel_size`, `stride` or `padding`). The Python built-in function `getattr` might be helpful here (it can be used e.g. as `getattr(self, "padding")`, which returns the same as `self.padding` would).
 
 ## MaxPool2d
+
+The first module you should implement is `MaxPool2d`. This will relatively simple, since it doesn't involve initializing any weights or biases. 
 """)
     with st.columns(1)[0]:
         st.markdown(r"""
 #### Exercise - implement `MaxPool2d`
+
+You should fill in the three methods of the `MaxPool2d` class below.
 
 ```python
 class MaxPool2d(nn.Module):
@@ -864,9 +1273,11 @@ class MaxPool2d(nn.Module):
         '''Add additional information to the string representation of this class.'''
         pass
 
-tests.test_maxpool2d_module(MaxPool2d)
-m = MaxPool2d(kernel_size=3, stride=2, padding=1)
-print(f"Manually verify that this is an informative repr: {m}")
+
+if MAIN:
+    tests.test_maxpool2d_module(MaxPool2d)
+    m = MaxPool2d(kernel_size=3, stride=2, padding=1)
+    print(f"Manually verify that this is an informative repr: {m}")
 ```
 """)
 
@@ -891,6 +1302,26 @@ MaxPool2d(kernel_size=3, stride=2, padding=1)
 
         with st.expander(r"Help - I get the error 'MaxPool2d' object has no attribute '_backward_hooks'"):
             st.markdown(r"""Remember to call `super().__init__()` in all your `Module` subclasses. This is a very easy thing to forget!""")
+        
+        with st.expander(r"Solution"):
+            st.markdown(r"""
+```python
+class MaxPool2d(nn.Module):
+    def __init__(self, kernel_size: IntOrPair, stride: Optional[IntOrPair] = None, padding: IntOrPair = 1):
+        super().__init__()
+        self.kernel_size = kernel_size
+        self.stride = stride
+        self.padding = padding
+
+    def forward(self, x: t.Tensor) -> t.Tensor:
+        '''Call the functional version of maxpool2d.'''
+        return maxpool2d(x, kernel_size=self.kernel_size, stride=self.stride, padding=self.padding)
+
+    def extra_repr(self) -> str:
+        '''Add additional information to the string representation of this class.'''
+        return ", ".join([f"{key}={getattr(self, key)}" for key in ["kernel_size", "stride", "padding"]])
+```
+""")
 
     st.markdown(r"""
 ## ReLU and Flatten
@@ -931,7 +1362,9 @@ class Flatten(nn.Module):
     def extra_repr(self) -> str:
         pass
 
-tests.test_flatten(Flatten)
+
+if MAIN:
+    tests.test_flatten(Flatten)
 ```
 """)
 
@@ -951,6 +1384,35 @@ The most common reason is failing to correctly handle indices. Make sure that:
 * You're indexing up to **and including** `end_dim`.
 * You're correctly managing the times when `end_dim` is negative (e.g. if `input` is an nD tensor, and `end_dim=-1`, this should be interpreted as `end_dim=n-1`).
 """)
+        with st.expander("Solution"):
+            st.markdown(r"""
+```python
+class Flatten(nn.Module):
+    def __init__(self, start_dim: int = 1, end_dim: int = -1) -> None:
+        super().__init__()
+        self.start_dim = start_dim
+        self.end_dim = end_dim
+
+    def forward(self, input: t.Tensor) -> t.Tensor:
+        '''Flatten out dimensions from start_dim to end_dim, inclusive of both.
+        '''
+        shape = input.shape
+        
+        start_dim = self.start_dim
+        end_dim = self.end_dim if self.end_dim >= 0 else len(shape) + self.end_dim
+        
+        shape_left = shape[:start_dim]
+        shape_middle = functools.reduce(lambda x, y: x*y, shape[start_dim : end_dim+1])
+        shape_right = shape[end_dim+1:]
+        
+        new_shape = shape_left + (shape_middle,) + shape_right
+        
+        return t.reshape(input, new_shape)
+
+    def extra_repr(self) -> str:
+        return ", ".join([f"{key}={getattr(self, key)}" for key in ["start_dim", "end_dim"]])
+```
+""")
 
     st.markdown(r"""
 ## Linear
@@ -966,7 +1428,9 @@ Also, in tomorrow's exercises we'll be building a ResNet and loading in weights 
 
 Each float in the weight and bias tensors are drawn independently from the uniform distribution on the interval:
 
-$$ \bigg[-\frac{1}{\sqrt{N_{in}}}, \frac{1}{\sqrt{N_{in}}}\bigg] $$
+$$
+\bigg[-\frac{1}{\sqrt{N_{in}}}, \frac{1}{\sqrt{N_{in}}}\bigg]
+$$
 
 where $N_{in}$ is the number of inputs contributing to each output value. The rough intuition for this is that it keeps the variance of the activations at each layer constant, since each one is calculated by taking the sum over $N_{in}$ inputs multiplied by the weights (and standard deviation of the sum of independent random variables scales as the square root of number of variables).
 
@@ -994,16 +1458,60 @@ class Linear(nn.Module):
 
     def extra_repr(self) -> str:
         pass
-    
-tests.test_linear_forward(Linear)
-tests.test_linear_parameters(Linear)
-tests.test_linear_no_bias(Linear)
-```""")
+
+
+if MAIN:
+    tests.test_linear_forward(Linear)
+    tests.test_linear_parameters(Linear)
+    tests.test_linear_no_bias(Linear)
+```
+""")
 
         with st.expander(r"""Help - when I print my Linear module, it also prints a large tensor."""):
             st.markdown(r"""This is because you've (correctly) defined `self.bias` as either `torch.Tensor` or `None`, rather than set it to the boolean value of `bias` used in initialisation.
         
 To fix this, you will need to change `extra_repr` so that it prints the boolean value of `bias` rather than the value of `self.bias`.""")
+
+        with st.expander("Solution"):
+            st.markdown(r"""
+```python
+class Linear(nn.Module):
+    def __init__(self, in_features: int, out_features: int, bias=True):
+        '''A simple linear (technically, affine) transformation.
+
+        The fields should be named `weight` and `bias` for compatibility with PyTorch.
+        If `bias` is False, set `self.bias` to None.
+        '''
+        super().__init__()
+        self.in_features = in_features
+        self.out_features = out_features
+        self.bias = bias
+        
+        sf = 1 / np.sqrt(in_features)
+        
+        weight = sf * (2 * t.rand(out_features, in_features) - 1)
+        self.weight = nn.Parameter(weight)
+        
+        if bias:
+            bias = sf * (2 * t.rand(out_features,) - 1)
+            self.bias = nn.Parameter(bias)
+        else:
+            self.bias = None
+
+    def forward(self, x: t.Tensor) -> t.Tensor:
+        '''
+        x: shape (*, in_features)
+        Return: shape (*, out_features)
+        '''
+        x = einsum("... in_features, out_features in_features -> ... out_features", x, self.weight)
+        if self.bias is not None: x += self.bias
+        return x
+
+    def extra_repr(self) -> str:
+        # note, we need to use `self.bias is not None`, because `self.bias` is either a tensor or None, not bool
+        return f"in_features={self.in_features}, out_features={self.out_features}, bias={self.bias is not None}"
+```
+""")
 
     st.markdown(r"""## Conv2d
 
@@ -1031,11 +1539,47 @@ class Conv2d(nn.Module):
     def extra_repr(self) -> str:
         pass
 
-tests.test_conv2d_module(Conv2d)
+
+if MAIN:
+    tests.test_conv2d_module(Conv2d)
 ```
 """)
         with st.expander(r"""Help - I don't know what to use as number of inputs, when doing Xavier initialisation."""):
             st.markdown(r"""In the case of convolutions, each value in the output is computed by taking the product over `in_channels * kernel_width * kernel_height` elements. So this should be our value for $N_{in}$.""")
+
+        with st.expander("Solution"):
+            st.markdown(r"""
+```python
+class Conv2d(nn.Module):
+    def __init__(
+        self, in_channels: int, out_channels: int, kernel_size: IntOrPair, stride: IntOrPair = 1, padding: IntOrPair = 0
+    ):
+        '''
+        Same as torch.nn.Conv2d with bias=False.
+
+        Name your weight field `self.weight` for compatibility with the PyTorch version.
+        '''
+        super().__init__()
+        self.in_channels = in_channels
+        self.out_channels = out_channels
+        self.kernel_size = kernel_size
+        self.stride = stride
+        self.padding = padding
+        
+        kernel_height, kernel_width = force_pair(kernel_size)
+        sf = 1 / np.sqrt(in_channels * kernel_width * kernel_height)
+        weight = sf * (2 * t.rand(out_channels, in_channels, kernel_height, kernel_width) - 1)
+        self.weight = nn.Parameter(weight)
+
+    def forward(self, x: t.Tensor) -> t.Tensor:
+        '''Apply the functional conv2d you wrote earlier.'''
+        return conv2d(x, self.weight, self.stride, self.padding)
+
+    def extra_repr(self) -> str:
+        keys = ["in_channels", "out_channels", "kernel_size", "stride", "padding"]
+        return ", ".join([f"{key}={getattr(self, key)}" for key in keys])
+```
+""")
 
     st.markdown(r"""
 ---

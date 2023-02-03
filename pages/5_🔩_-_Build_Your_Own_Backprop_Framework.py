@@ -99,16 +99,19 @@ def section_intro():
 import os
 import re
 import time
+import numpy as np
 from collections import defaultdict
 from dataclasses import dataclass
-from typing import Any, Callable, Iterable, Iterator, Optional, Protocol, Union
-from einops import repeat
+from typing import Any, Callable, Iterator, Iterable, Optional, Union, Dict, List, Tuple
+from tqdm import tqdm
 
 import part5_backprop_tests as tests
 import part5_backprop_utils as utils
 
 Arr = np.ndarray
 grad_tracking_enabled = True
+
+MAIN = __name__ == "__main__"
 ```
 
 ## Computing Gradients with Backpropagation
@@ -692,13 +695,13 @@ If you're confused as to what this question is asking you to implement, you can 
 ```python
 class BackwardFuncLookup:
     def __init__(self) -> None:
-        pass
+        self.back_funcs: defaultdict[Callable, dict[int, Callable]] = defaultdict(dict)
 
     def add_back_func(self, forward_fn: Callable, arg_position: int, back_fn: Callable) -> None:
-        pass
+        self.back_funcs[forward_fn][arg_position] = back_fn
 
     def get_back_func(self, forward_fn: Callable, arg_position: int) -> Callable:
-        pass
+        return self.back_funcs[forward_fn][arg_position]
 
 
 if MAIN:
@@ -1042,6 +1045,7 @@ def multiply_forward(a: Union[Tensor, int], b: Union[Tensor, int]) -> Tensor:
     ])
     
     # Define our tensor
+    assert isinstance(out_arr, np.ndarray)
     out = Tensor(out_arr, requires_grad)
     
     # If requires_grad, then create a recipe
@@ -1117,6 +1121,37 @@ This is probably because you're not defining `requires_grad` correctly. Remember
 
         st.markdown(r"""
 Note - none of these functions involve keyword args, so the tests won't detect if you're handling kwargs incorrectly (or even failing to use them at all). If your code fails in later exercises, you might want to come back here and check that you're using the kwargs correctly. Alternatively, once you pass the tests, you can compare your code to the solutions and see how they handle kwargs.
+""")
+        with st.expander("Solution"):
+            st.markdown(r"""
+```python
+def wrap_forward_fn(numpy_func: Callable, is_differentiable=True) -> Callable:
+    '''
+    numpy_func: function. It takes any number of positional arguments, some of which may be NumPy arrays, and any number of keyword arguments which we aren't allowing to be NumPy arrays at present. It returns a single NumPy array.
+    is_differentiable: if True, numpy_func is differentiable with respect to some input argument, so we may need to track information in a Recipe. If False, we definitely don't need to track information.
+
+    Return: function. It has the same signature as numpy_func, except wherever there was a NumPy array, this has a Tensor instead.
+    '''
+
+    def tensor_func(*args: Any, **kwargs: Any) -> Tensor:
+
+        arg_arrays = tuple([(a.array if isinstance(a, Tensor) else a) for a in args])
+        out_arr = numpy_func(*arg_arrays, **kwargs)
+    
+        requires_grad = grad_tracking_enabled and is_differentiable and any([
+            (isinstance(a, Tensor) and (a.requires_grad or a.recipe is not None)) for a in args
+        ])
+        
+        out = Tensor(out_arr, requires_grad)
+        
+        if requires_grad:
+            parents = {idx: a for idx, a in enumerate(args) if isinstance(a, Tensor)}
+            out.recipe = Recipe(numpy_func, arg_arrays, kwargs, parents)
+            
+        return out
+
+    return tensor_func
+```
 """)
 
     st.markdown(r"""
@@ -1516,7 +1551,7 @@ def section_more_fwd_bwd():
     <li><a class="contents-el" href="#expand"><code>expand</code></a></li>
     <li><a class="contents-el" href="#sum"><code>sum</code></a></li>
     <li><a class="contents-el" href="#indexing">Indexing</a></li>
-    <li><a class="contents-el" href="#elementwise-add-divide-subtract">Elementwise <code>add</code>, <code>divide</code>, <code>subtract</code></a></li>
+    <li><a class="contents-el" href="#elementwise-add-subtract-divide">Elementwise <code>add</code>, <code>subtract</code>, <code>divide</code></a></li>
     <li><a class="contents-el" href="#in-place-operations">In-Place Operations</a></li>
     <li><a class="contents-el" href="#mixed-scalar-tensor-operations">Mixed scalar-tensor operations</a></li>
     <li><a class="contents-el" href="#in-place-operations">In-Place Operations</a></li>
@@ -1533,7 +1568,7 @@ Congrats on implementing backprop! The next thing we'll do is write implement a 
 These should be just like your `log_back` and `multiply_back0`, `multiplyback1` examples earlier.
 """)
     st.error(r"""
-*Note - some of these exercises can get a bit boring. About 60% of the value of these exercises was in the first 2 sections out of 5, and of the remaining 40%, not much of it is in this section! So you're welcome to skim through these exercises if you don't find them interesting.
+*Note - some of these exercises can get a bit boring. About 60% of the value of these exercises was in the first 2 sections out of 5, and of the remaining 40%, not much of it is in this section! So you're welcome to skim through these exercises if you don't find them interesting.*
 """)
     st.markdown(r"""
 ## Non-Differentiable Functions
@@ -1813,7 +1848,7 @@ def sum_back(grad_out: Arr, out: Arr, x: Arr, dim=None, keepdim=False):
     
     # If grad_out is a scalar, we need to make it a tensor (so we can expand it later)
     if not isinstance(grad_out, Arr):
-        grad_out = Tensor(grad_out)
+        grad_out = np.array(grad_out)
     
     # If dim=None, this means we summed over all axes, and we want to repeat back to input shape
     if dim is None:
@@ -2211,7 +2246,7 @@ class Parameter(Tensor):
     def __init__(self, tensor: Tensor, requires_grad=True):
         '''Share the array with the provided tensor.'''
         return super().__init__(tensor.array, requires_grad=requires_grad)
-        
+
     def __repr__(self):
         return f"Parameter containing:\n{super().__repr__()}"
 ```
@@ -2400,16 +2435,18 @@ class Linear(Module):
         st.markdown(r"""
 ```python
 class Linear(Module):
+    weight: Parameter
+    bias: Optional[Parameter]
+    
     def __init__(self, in_features: int, out_features: int, bias=True):
         '''A simple linear (technically, affine) transformation.
 
         The fields should be named `weight` and `bias` for compatibility with PyTorch.
         If `bias` is False, set `self.bias` to None.
         '''
-        super().__init__()
         self.in_features = in_features
         self.out_features = out_features
-        self.bias = bias
+        super().__init__()
         
         # sf needs to be a float
         sf = in_features ** -0.5
@@ -2430,7 +2467,7 @@ class Linear(Module):
         '''
         out = x @ self.weight.permute((1, 0))
         if self.bias is not None: 
-            out += self.bias
+            out = out + self.bias
         return out
 
     def extra_repr(self) -> str:
@@ -2551,28 +2588,20 @@ class SGD:
                 p.add_(p.grad, -self.lr)
 
 
-def train(model, train_loader, optimizer, epoch):
-    for (batch_idx, (data, target)) in enumerate(train_loader):
+def train(model: MLP, train_loader, optimizer, epoch):
+    progress_bar = tqdm(enumerate(train_loader))
+    for (batch_idx, (data, target)) in progress_bar:
         data = Tensor(data.numpy())
         target = Tensor(target.numpy())
         optimizer.zero_grad()
         output = model(data)
         loss = cross_entropy(output, target).sum() / len(output)
         loss.backward()
+        progress_bar.set_description(f"Avg loss: {loss.item():.3f}")
         optimizer.step()
-        if batch_idx % 50 == 0:
-            print(
-                "Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}".format(
-                    epoch,
-                    batch_idx * len(data),
-                    len(train_loader.dataset),
-                    100.0 * batch_idx / len(train_loader),
-                    loss.item(),
-                )
-            )
 
 
-def test(model, test_loader):
+def test(model: MLP, test_loader):
     test_loss = 0
     correct = 0
     with NoGrad():
@@ -2584,11 +2613,7 @@ def test(model, test_loader):
             pred = output.argmax(dim=1, keepdim=True)
             correct += (pred == target.reshape(pred.shape)).sum().item()
     test_loss /= len(test_loader.dataset)
-    print(
-        "\nTest set: Average loss: {:.4f}, Accuracy: {}/{} ({:.0f}%)\n".format(
-            test_loss, correct, len(test_loader.dataset), 100.0 * correct / len(test_loader.dataset)
-        )
-    )
+    print(f"Test set: Avg loss: {test_loss:.4f}, Accuracy: {correct}/{len(test_loader.dataset)} ({correct / len(test_loader.dataset):.1%})")
 ```
 
 ### Training Loop
@@ -2605,7 +2630,7 @@ if MAIN:
         train(model, train_loader, optimizer, epoch)
         test(model, test_loader)
         optimizer.step()
-    print(f"Completed in {time.time() - start: .2f}s")
+    print(f"\nCompleted in {time.time() - start: .2f}s")
 ```
 """)
 

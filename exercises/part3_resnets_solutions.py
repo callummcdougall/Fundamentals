@@ -70,6 +70,11 @@ class ConvNetTrainingArgs():
     device: str = "cuda" if t.cuda.is_available() else "cpu"
     filename_save_model: str = "./part2_cnn_model.pt"
 
+    # def __repr__(self):
+    #     import pprint
+    #     return pprint.pformat(self.__dict__)
+
+
 # %%
 
 def train_convnet(args: ConvNetTrainingArgs):
@@ -124,7 +129,7 @@ def train_convnet(args: ConvNetTrainingArgs):
             
         print(f"Train loss = {loss:.6f}, Accuracy = {accuracy}/{total}")
     
-    print(f"Saving model to: {args.filename_save_model}")
+    print(f"\nSaving model to: {args.filename_save_model}")
     t.save(model, args.filename_save_model)
     return loss_list, accuracy_list
 
@@ -158,7 +163,7 @@ class Sequential(nn.Module):
             self.add_module(str(i), mod)
 
     def forward(self, x: t.Tensor) -> t.Tensor:
-        """Chain each module together, with the output from one feeding into the next one."""
+        '''Chain each module together, with the output from one feeding into the next one.'''
         for mod in self._modules.values():
             if mod is not None:
                 x = mod(x)
@@ -221,21 +226,21 @@ class BatchNorm2d(nn.Module):
 
 class AveragePool(nn.Module):
     def forward(self, x: t.Tensor) -> t.Tensor:
-        """
+        '''
         x: shape (batch, channels, height, width)
         Return: shape (batch, channels)
-        """
+        '''
         return t.mean(x, dim=(2, 3))
 
 
 class ResidualBlock(nn.Module):
     def __init__(self, in_feats: int, out_feats: int, first_stride=1):
-        """A single residual block with optional downsampling.
+        '''A single residual block with optional downsampling.
 
         For compatibility with the pretrained model, declare the left side branch first using a `Sequential`.
 
         If first_stride is > 1, this means the optional (conv + bn) should be present on the right branch. Declare it second using another `Sequential`.
-        """
+        '''
         super().__init__()
         
         self.left = Sequential(
@@ -257,14 +262,14 @@ class ResidualBlock(nn.Module):
         self.relu = ReLU()
 
     def forward(self, x: t.Tensor) -> t.Tensor:
-        """Compute the forward pass.
+        '''Compute the forward pass.
 
         x: shape (batch, in_feats, height, width)
 
         Return: shape (batch, out_feats, height / stride, width / stride)
 
         If no downsampling block is present, the addition should just add the left branch's output to the input.
-        """
+        '''
         x_left = self.left(x)
         x_right = self.right(x)
         return self.relu(x_left + x_right)
@@ -272,7 +277,7 @@ class ResidualBlock(nn.Module):
 
 class BlockGroup(nn.Module):
     def __init__(self, n_blocks: int, in_feats: int, out_feats: int, first_stride=1):
-        """An n_blocks-long sequence of ResidualBlock where only the first block uses the provided stride."""
+        '''An n_blocks-long sequence of ResidualBlock where only the first block uses the provided stride.'''
         super().__init__()
         
         blocks = [ResidualBlock(in_feats, out_feats, first_stride)] + [
@@ -281,11 +286,11 @@ class BlockGroup(nn.Module):
         self.blocks = nn.Sequential(*blocks)
         
     def forward(self, x: t.Tensor) -> t.Tensor:
-        """Compute the forward pass.
+        '''Compute the forward pass.
         x: shape (batch, in_feats, height, width)
 
         Return: shape (batch, out_feats, height / first_stride, width / first_stride)
-        """
+        '''
         return self.blocks(x)
 
 # %%
@@ -334,10 +339,10 @@ class ResNet34(nn.Module):
         )
 
     def forward(self, x: t.Tensor) -> t.Tensor:
-        """
+        '''
         x: shape (batch, channels, height, width)
         Return: shape (batch, n_classes)
-        """
+        '''
         x = self.in_layers(x)
         x = self.residual_layers(x)
         x = self.out_layers(x)
@@ -404,9 +409,9 @@ if MAIN:
 # %%
 
 def prepare_data(images: List[PIL.Image.Image]) -> t.Tensor:
-    """
+    '''
     Return: shape (batch=len(images), num_channels=3, height=224, width=224)
-    """
+    '''
     x = t.stack([transform(img) for img in images], dim=0)  # type: ignore
     return x
 

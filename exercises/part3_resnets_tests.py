@@ -1,7 +1,7 @@
 import torch as t
 
 def test_batchnorm2d_module(BatchNorm2d):
-    """The public API of the module should be the same as the real PyTorch version."""
+    '''The public API of the module should be the same as the real PyTorch version.'''
     num_features = 2
     bn = BatchNorm2d(num_features)
     assert bn.num_features == num_features
@@ -13,7 +13,7 @@ def test_batchnorm2d_module(BatchNorm2d):
     print("All tests in `test_batchnorm2d_module` passed!")
 
 def test_batchnorm2d_forward(BatchNorm2d):
-    """For each channel, mean should be very close to 0 and std kinda close to 1 (because of eps)."""
+    '''For each channel, mean should be very close to 0 and std kinda close to 1 (because of eps).'''
     num_features = 2
     bn = BatchNorm2d(num_features)
     assert bn.training
@@ -25,7 +25,7 @@ def test_batchnorm2d_forward(BatchNorm2d):
     print("All tests in `test_batchnorm2d_forward` passed!")
 
 def test_batchnorm2d_running_mean(BatchNorm2d):
-    """Over repeated forward calls with the same data in train mode, the running mean should converge to the actual mean."""
+    '''Over repeated forward calls with the same data in train mode, the running mean should converge to the actual mean.'''
     bn = BatchNorm2d(3, momentum=0.6)
     assert bn.training
     x = t.arange(12).float().view((2, 3, 2, 1))

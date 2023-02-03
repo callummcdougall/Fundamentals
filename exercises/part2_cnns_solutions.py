@@ -1,34 +1,64 @@
-# Section 1
+# %%
+
 from fancy_einsum import einsum
 from typing import Union, Optional, Tuple
 import numpy as np
 import torch as t
 from collections import namedtuple
 
-def einsum_trace(mat):
+import part2_cnns_utils as utils
+import part2_cnns_tests as tests
+
+MAIN = __name__ == "__main__"
+
+# %%
+
+def einsum_trace(mat: np.ndarray):
+    '''
+    Returns the same as `np.trace`.
+    '''
     return einsum("i i", mat)
 
-def einsum_mv(mat, vec):
+def einsum_mv(mat: np.ndarray, vec: np.ndarray):
+    '''
+    Returns the same as `np.matmul`, when `mat` is a 2D array and `vec` is 1D.
+    '''
     return einsum("i j, j -> i", mat, vec)
 
-def einsum_mm(mat1, mat2):
+def einsum_mm(mat1: np.ndarray, mat2: np.ndarray):
+    '''
+    Returns the same as `np.matmul`, when `mat1` and `mat2` are both 2D arrays.
+    '''
     return einsum("i j, j k -> i k", mat1, mat2)
 
-def einsum_inner(vec1, vec2):
+def einsum_inner(vec1: np.ndarray, vec2: np.ndarray):
+    '''
+    Returns the same as `np.inner`.
+    '''
     return einsum("i, i", vec1, vec2)
 
-def einsum_outer(vec1, vec2):
+def einsum_outer(vec1: np.ndarray, vec2: np.ndarray):
+    '''
+    Returns the same as `np.outer`.
+    '''
     return einsum("i, j -> i j", vec1, vec2)
 
+# %%
 
-# Section 2
+test_input = t.tensor(
+    [[0, 1, 2, 3, 4], 
+    [5, 6, 7, 8, 9], 
+    [10, 11, 12, 13, 14], 
+    [15, 16, 17, 18, 19]], dtype=t.float
+)
+
 
 TestCase = namedtuple("TestCase", ["output", "size", "stride"])
 
 test_cases = [
     TestCase(
         output=t.tensor([0, 1, 2, 3]), 
-        size=(4,), 
+        size=(4,),
         stride=(1,)
     ),
     # Explanation: the output is a 1D vector of length 4 (hence size=(4,))
@@ -36,16 +66,16 @@ test_cases = [
     # one element along the `test_input_a` tensor
 
     TestCase(
-        output=t.tensor([0, 1, 2, 3, 4]), 
-        size=(5,), 
+        output=t.tensor([0, 1, 2, 3, 4]),
+        size=(5,),
         stride=(1,)
     ),
     # Explanation: the tensor is held in a contiguous memory block. When you get to the end
     # of one row, a single stride jumps to the start of the next row
 
     TestCase(
-        output=t.tensor([0, 5, 10, 15]), 
-        size=(4,), 
+        output=t.tensor([0, 5, 10, 15]),
+        size=(4,),
         stride=(5,)
     ),
     # Explanation: this is same as previous case, only now you're moving in colspace (i.e. skipping
@@ -53,42 +83,49 @@ test_cases = [
     # So stride is 5 rather than 1
 
     TestCase(
-        output=t.tensor([[0, 1, 2], [5, 6, 7]]), 
-        size=(2, 3), 
-        stride=(5, 1)),
+        output=t.tensor([
+            [0, 1, 2], 
+            [5, 6, 7]
+        ]), 
+        size=(2, 3),
+        stride=(5, 1)
+    ),
     # Explanation: consider the output tensor. As you move one element along a row, you want to jump
     # one element in the `test_input_a` (since you're just going to the next row). As you move
     # one element along a column, you want to jump to the next column, i.e. a stride of 5.
 
     TestCase(
-        output=t.tensor(
-            [[0, 1, 2], 
-             [10, 11, 12]]
-        ), 
-        size=(2, 3), 
-        stride=(10, 1)),
-
-    TestCase(
-        output=t.tensor(
-            [[0, 0, 0], 
-             [11, 11, 11]]
-        ), 
+        output=t.tensor([
+            [0, 1, 2], 
+            [10, 11, 12]
+        ]), 
         size=(2, 3),
-        stride=(11, 0)),
+        stride=(10, 1)
+    ),
 
     TestCase(
-        output=t.tensor(
-            [0, 6, 12, 18]
-        ), 
-        size=(4,), 
-        stride=(6,)),
+        output=t.tensor([
+            [0, 0, 0], 
+            [11, 11, 11]
+        ]), 
+        size=(2, 3),
+        stride=(11, 0)
+    ),
 
     TestCase(
-        output=t.tensor(
-            [[[0, 1, 2]], [[9, 10, 11]]]
-        ), 
-        size=(2, 1, 3), 
-        stride=(9, 0, 1)),
+        output=t.tensor([0, 6, 12, 18]), 
+        size=(4,),
+        stride=(6,)
+    ),
+
+    TestCase(
+        output=t.tensor([
+            [[0, 1, 2]], 
+            [[9, 10, 11]]
+        ]), 
+        size=(2, 1, 3),
+        stride=(9, 0, 1)
+    ),
     # Note here that the middle element of `stride` doesn't actually matter, since you never
     # jump in this dimension. You could change it and the test result would still be the same
 
@@ -96,7 +133,7 @@ test_cases = [
         output=t.tensor(
             [
                 [
-                    [[0, 1], [2, 3]], 
+                    [[0, 1], [2, 3]],
                     [[4, 5], [6, 7]]
                 ], 
                 [
@@ -106,14 +143,28 @@ test_cases = [
             ]
         ),
         size=(2, 2, 2, 2),
-        stride=(12, 4, 2, 1),
+        stride=(12, 4, 2, 1)
     ),
 ]
+for (i, case) in enumerate(test_cases):
+    if (case.size is None) or (case.stride is None):
+        print(f"Test {i} failed: attempt missing.")
+    else:
+        actual = test_input.as_strided(size=case.size, stride=case.stride)
+        if (case.output != actual).any():
+            print(f"Test {i} failed:")
+            print(f"Expected: {case.output}")
+            print(f"Actual: {actual}\n")
+        else:
+            print(f"Test {i} passed!\n")
 
 
-
+# %%
 
 def as_strided_trace(mat: t.Tensor) -> t.Tensor:
+    '''
+    Returns the same as `torch.trace`, using only `as_strided` and `sum` methods.
+    '''
     
     stride = mat.stride()
     
@@ -122,7 +173,11 @@ def as_strided_trace(mat: t.Tensor) -> t.Tensor:
     
     return mat.as_strided((mat.size(0),), (sum(stride),)).sum()
 
+
 def as_strided_mv(mat: t.Tensor, vec: t.Tensor) -> t.Tensor:
+    '''
+    Returns the same as `torch.matmul`, using only `as_strided` and `sum` methods.
+    '''
     
     sizeM = mat.shape
     sizeV = vec.shape
@@ -139,7 +194,11 @@ def as_strided_mv(mat: t.Tensor, vec: t.Tensor) -> t.Tensor:
     
     return product_expanded.sum(dim=1)
 
+
 def as_strided_mm(matA: t.Tensor, matB: t.Tensor) -> t.Tensor:
+    '''
+    Returns the same as `torch.matmul`, using only `as_strided` and `sum` methods.
+    '''
     
     assert len(matA.shape) == 2, f"mat1 should have size 2"
     assert len(matB.shape) == 2, f"mat2 should have size 2"
@@ -164,17 +223,23 @@ def as_strided_mm(matA: t.Tensor, matB: t.Tensor) -> t.Tensor:
     return product_expanded.sum(dim=1)
 
 
+if MAIN:
+    tests.test_trace(as_strided_trace)
+    tests.test_mv(as_strided_mv)
+    tests.test_mv2(as_strided_mv)
+    tests.test_mm(as_strided_mm)
+    tests.test_mm2(as_strided_mm)
 
-
+# %%
 
 def conv1d_minimal(x: t.Tensor, weights: t.Tensor) -> t.Tensor:
-    """Like torch's conv1d using bias=False and all other keyword arguments left at their default values.
+    '''Like torch's conv1d using bias=False and all other keyword arguments left at their default values.
 
     x: shape (batch, in_channels, width)
     weights: shape (out_channels, in_channels, kernel_width)
 
     Returns: shape (batch, out_channels, output_width)
-    """
+    '''
     
     batch, in_channels, width = x.shape
     out_channels, in_channels_2, kernel_width = weights.shape
@@ -195,13 +260,13 @@ def conv1d_minimal(x: t.Tensor, weights: t.Tensor) -> t.Tensor:
     )
 
 def conv2d_minimal(x: t.Tensor, weights: t.Tensor) -> t.Tensor:
-    """Like torch's conv2d using bias=False and all other keyword arguments left at their default values.
+    '''Like torch's conv2d using bias=False and all other keyword arguments left at their default values.
 
     x: shape (batch, in_channels, height, width)
     weights: shape (out_channels, in_channels, kernel_height, kernel_width)
 
     Returns: shape (batch, out_channels, output_height, output_width)
-    """
+    '''
     
     batch, in_channels, height, width = x.shape
     out_channels, in_channels_2, kernel_height, kernel_width = weights.shape
@@ -225,40 +290,38 @@ out_channels in_channels kernel_height kernel_width \
     )
 
 def pad1d(x: t.Tensor, left: int, right: int, pad_value: float) -> t.Tensor:
-    """Return a new tensor with padding applied to the edges.
+    '''Return a new tensor with padding applied to the edges.
 
     x: shape (batch, in_channels, width), dtype float32
 
     Return: shape (batch, in_channels, left + right + width)
-    """
+    '''
     B, C, W = x.shape
     output = x.new_full(size=(B, C, left + W + right), fill_value=pad_value)
     output[..., left : left + W] = x
     # Note - you can't use `left:-right`, because `right` could be zero.
     return output
     
-
-
 def pad2d(x: t.Tensor, left: int, right: int, top: int, bottom: int, pad_value: float) -> t.Tensor:
-    """Return a new tensor with padding applied to the edges.
+    '''Return a new tensor with padding applied to the edges.
 
     x: shape (batch, in_channels, height, width), dtype float32
 
     Return: shape (batch, in_channels, top + height + bottom, left + width + right)
-    """
+    '''
     B, C, H, W = x.shape
     output = x.new_full(size=(B, C, top + H + bottom, left + W + right), fill_value=pad_value)
     output[..., top : top + H, left : left + W] = x
     return output
 
 def conv1d(x, weights, stride: int = 1, padding: int = 0) -> t.Tensor:
-    """Like torch's conv1d using bias=False.
+    '''Like torch's conv1d using bias=False.
 
     x: shape (batch, in_channels, width)
     weights: shape (out_channels, in_channels, kernel_width)
 
     Returns: shape (batch, out_channels, output_width)
-    """
+    '''
     
     x_padded = pad1d(x, left=padding, right=padding, pad_value=0)
     
@@ -284,7 +347,7 @@ IntOrPair = Union[int, Tuple[int, int]]
 Pair = Tuple[int, int]
 
 def force_pair(v: IntOrPair) -> Pair:
-    """Convert v to a pair of int, if it isn't already."""
+    '''Convert v to a pair of int, if it isn't already.'''
     if isinstance(v, tuple):
         if len(v) != 2:
             raise ValueError(v)
@@ -293,15 +356,16 @@ def force_pair(v: IntOrPair) -> Pair:
         return (v, v)
     raise ValueError(v)
 
+
 def conv2d(x, weights, stride: IntOrPair = 1, padding: IntOrPair = 0) -> t.Tensor:
-    """Like torch's conv2d using bias=False
+    '''Like torch's conv2d using bias=False
 
     x: shape (batch, in_channels, height, width)
     weights: shape (out_channels, in_channels, kernel_height, kernel_width)
 
 
     Returns: shape (batch, out_channels, output_height, output_width)
-    """
+    '''
 
     stride_h, stride_w = force_pair(stride)
     padding_h, padding_w = force_pair(padding)
@@ -327,13 +391,13 @@ def conv2d(x, weights, stride: IntOrPair = 1, padding: IntOrPair = 0) -> t.Tenso
 
 def maxpool2d(x: t.Tensor, kernel_size: IntOrPair, stride: Optional[IntOrPair] = None, padding: IntOrPair = 0
 ) -> t.Tensor:
-    """Like PyTorch's maxpool2d.
+    '''Like PyTorch's maxpool2d.
 
     x: shape (batch, channels, height, width)
     stride: if None, should be equal to the kernel size
 
     Return: (batch, channels, output_height, output_width)
-    """
+    '''
 
     if stride is None:
         stride = kernel_size
@@ -358,7 +422,18 @@ def maxpool2d(x: t.Tensor, kernel_size: IntOrPair, stride: Optional[IntOrPair] =
     return output
 
 
-# =============== PART 4 ===============
+if MAIN:
+    tests.test_conv1d_minimal(conv1d_minimal)
+    tests.test_conv2d_minimal(conv2d_minimal)
+    tests.test_pad1d(pad1d)
+    tests.test_pad1d_multi_channel(pad1d)
+    tests.test_pad2d(pad2d)
+    tests.test_pad2d_multi_channel(pad2d)
+    tests.test_conv1d(conv1d)
+    tests.test_conv2d(conv2d)
+    tests.test_maxpool2d(maxpool2d)
+
+# %%
 
 from torch import nn
 
@@ -370,11 +445,11 @@ class MaxPool2d(nn.Module):
         self.padding = padding
 
     def forward(self, x: t.Tensor) -> t.Tensor:
-        """Call the functional version of maxpool2d."""
+        '''Call the functional version of maxpool2d.'''
         return maxpool2d(x, kernel_size=self.kernel_size, stride=self.stride, padding=self.padding)
 
     def extra_repr(self) -> str:
-        """Add additional information to the string representation of this class."""
+        '''Add additional information to the string representation of this class.'''
         return ", ".join([f"{key}={getattr(self, key)}" for key in ["kernel_size", "stride", "padding"]])
 
 
@@ -391,8 +466,8 @@ class Flatten(nn.Module):
         self.end_dim = end_dim
 
     def forward(self, input: t.Tensor) -> t.Tensor:
-        """Flatten out dimensions from start_dim to end_dim, inclusive of both.
-        """
+        '''Flatten out dimensions from start_dim to end_dim, inclusive of both.
+        '''
         shape = input.shape
         
         start_dim = self.start_dim
@@ -411,11 +486,11 @@ class Flatten(nn.Module):
 
 class Linear(nn.Module):
     def __init__(self, in_features: int, out_features: int, bias=True):
-        """A simple linear (technically, affine) transformation.
+        '''A simple linear (technically, affine) transformation.
 
         The fields should be named `weight` and `bias` for compatibility with PyTorch.
         If `bias` is False, set `self.bias` to None.
-        """
+        '''
         super().__init__()
         self.in_features = in_features
         self.out_features = out_features
@@ -433,10 +508,10 @@ class Linear(nn.Module):
             self.bias = None
 
     def forward(self, x: t.Tensor) -> t.Tensor:
-        """
+        '''
         x: shape (*, in_features)
         Return: shape (*, out_features)
-        """
+        '''
         x = einsum("... in_features, out_features in_features -> ... out_features", x, self.weight)
         if self.bias is not None: x += self.bias
         return x
@@ -450,11 +525,11 @@ class Conv2d(nn.Module):
     def __init__(
         self, in_channels: int, out_channels: int, kernel_size: IntOrPair, stride: IntOrPair = 1, padding: IntOrPair = 0
     ):
-        """
+        '''
         Same as torch.nn.Conv2d with bias=False.
 
         Name your weight field `self.weight` for compatibility with the PyTorch version.
-        """
+        '''
         super().__init__()
         self.in_channels = in_channels
         self.out_channels = out_channels
@@ -468,9 +543,22 @@ class Conv2d(nn.Module):
         self.weight = nn.Parameter(weight)
 
     def forward(self, x: t.Tensor) -> t.Tensor:
-        """Apply the functional conv2d you wrote earlier."""
+        '''Apply the functional conv2d you wrote earlier.'''
         return conv2d(x, self.weight, self.stride, self.padding)
 
     def extra_repr(self) -> str:
         keys = ["in_channels", "out_channels", "kernel_size", "stride", "padding"]
         return ", ".join([f"{key}={getattr(self, key)}" for key in keys])
+
+if MAIN:
+    tests.test_maxpool2d_module(MaxPool2d)
+    m = MaxPool2d(kernel_size=3, stride=2, padding=1)
+    print(f"Manually verify that this is an informative repr: {m}")
+    tests.test_relu(ReLU)
+    tests.test_flatten(Flatten)
+    tests.test_linear_forward(Linear)
+    tests.test_linear_parameters(Linear)
+    tests.test_linear_no_bias(Linear)
+    tests.test_conv2d_module(Conv2d)
+
+# %%

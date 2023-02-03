@@ -18,7 +18,7 @@ import pandas as pd
 #         display(df)
 
 def print_param_count(*models, display_df=True, use_state_dict=True):
-    """
+    '''
     display_df: bool
         If true, displays styled dataframe
         if false, returns dataframe
@@ -28,7 +28,7 @@ def print_param_count(*models, display_df=True, use_state_dict=True):
             This will include buffers, not just params
         If false, uses model.named_parameters() to construct dataframe
             This misses out buffers (more useful for GPT)
-    """
+    '''
     df_list = []
     gmap_list = []
     for i, model in enumerate(models, start=1):

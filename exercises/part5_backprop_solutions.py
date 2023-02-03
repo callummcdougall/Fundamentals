@@ -1,12 +1,11 @@
 # %%
-from asyncio import wait_for
 import re
-from webbrowser import get
 import numpy as np
 from collections import defaultdict
 from dataclasses import dataclass
 import time
 from typing import Any, Callable, Iterator, Iterable, Optional, Union, Dict, List, Tuple
+from tqdm import tqdm
 
 import part5_backprop_tests as tests
 import part5_backprop_utils as utils
@@ -31,26 +30,31 @@ class Recipe:
     "Keyword arguments passed to func. To keep things simple today, we aren't going to backpropagate with respect to these."
     parents: Dict[int, "Tensor"]
     "Map from positional argument index to the Tensor at that position, in order to be able to pass gradients back along the computational graph."
+
 class Tensor:
     '''
     A drop-in replacement for torch.Tensor supporting a subset of features.
     '''
 
     array: Arr
-    "The underlying array. Can be shared between multiple Tensors."
+    '''The underlying array. Can be shared between multiple Tensors.'''
+
     requires_grad: bool
-    "If True, calling functions or methods on this tensor will track relevant data for backprop."
+    '''If True, calling functions or methods on this tensor will track relevant data for backprop.'''
+
     grad: Optional["Tensor"]
-    "Backpropagation will accumulate gradients into this field."
+    '''Backpropagation will accumulate gradients into this field.'''
+
     recipe: Optional[Recipe]
-    "Extra information necessary to run backpropagation."
+    '''Extra information necessary to run backpropagation.'''
 
     def __init__(self, array: Union[Arr, list], requires_grad=False):
         self.array = array if isinstance(array, Arr) else np.array(array)
         self.requires_grad = requires_grad
         self.grad = None
+
         self.recipe = None
-        "If not None, this tensor's array was created via recipe.func(*recipe.args, **recipe.kwargs)."
+        '''If not None, this tensor's array was created via recipe.func(*recipe.args, **recipe.kwargs).'''
 
     def __neg__(self) -> "Tensor":
         return negative(self)
@@ -77,7 +81,7 @@ class Tensor:
         return true_divide(self, other)
 
     def __rtruediv__(self, other):
-        return true_divide(other, self)
+        return true_divide(self, other)
 
     def __matmul__(self, other):
         return matmul(self, other)
@@ -174,6 +178,7 @@ class Tensor:
             raise RuntimeError("bool value of Tensor with more than one value is ambiguous")
         return bool(self.item())
 
+
 def empty(*shape: int) -> Tensor:
     '''Like torch.empty.'''
     return Tensor(np.empty(shape))
@@ -192,6 +197,170 @@ def arange(start: int, end: int, step=1) -> Tensor:
 def tensor(array: Arr, requires_grad=False) -> Tensor:
     '''Like torch.tensor.'''
     return Tensor(array, requires_grad=requires_grad)
+
+# %%
+
+# class Tensor:
+#     '''
+#     A drop-in replacement for torch.Tensor supporting a subset of features.
+#     '''
+
+#     array: Arr
+#     "The underlying array. Can be shared between multiple Tensors."
+#     requires_grad: bool
+#     "If True, calling functions or methods on this tensor will track relevant data for backprop."
+#     grad: Optional["Tensor"]
+#     "Backpropagation will accumulate gradients into this field."
+#     recipe: Optional[Recipe]
+#     "Extra information necessary to run backpropagation."
+
+#     def __init__(self, array: Union[Arr, list], requires_grad=False):
+#         self.array = array if isinstance(array, Arr) else np.array(array)
+#         self.requires_grad = requires_grad
+#         self.grad = None
+#         self.recipe = None
+#         "If not None, this tensor's array was created via recipe.func(*recipe.args, **recipe.kwargs)."
+
+#     def __neg__(self) -> "Tensor":
+#         return negative(self)
+
+#     def __add__(self, other) -> "Tensor":
+#         return add(self, other)
+
+#     def __radd__(self, other) -> "Tensor":
+#         return add(other, self)
+
+#     def __sub__(self, other) -> "Tensor":
+#         return subtract(self, other)
+
+#     def __rsub__(self, other) -> "Tensor":
+#         return subtract(other, self)
+
+#     def __mul__(self, other) -> "Tensor":
+#         return multiply(self, other)
+
+#     def __rmul__(self, other) -> "Tensor":
+#         return multiply(other, self)
+
+#     def __truediv__(self, other) -> "Tensor":
+#         return true_divide(self, other)
+
+#     def __rtruediv__(self, other) -> "Tensor":
+#         return true_divide(other, self)
+
+#     def __matmul__(self, other) -> "Tensor":
+#         return matmul(self, other)
+
+#     def __rmatmul__(self, other) -> "Tensor":
+#         return matmul(other, self)
+
+#     def __eq__(self, other):
+#         return eq(self, other)
+
+#     def __repr__(self) -> str:
+#         return f"Tensor({repr(self.array)}, requires_grad={self.requires_grad})"
+
+#     def __len__(self) -> int:
+#         if self.array.ndim == 0:
+#             raise TypeError
+#         return self.array.shape[0]
+
+#     def __hash__(self) -> int:
+#         return id(self)
+
+#     def __getitem__(self, index) -> "Tensor":
+#         return getitem(self, index)
+
+#     def add_(self, other: "Tensor", alpha: float = 1.0) -> "Tensor":
+#         add_(self, other, alpha=alpha)
+#         return self
+
+#     @property
+#     def T(self) -> "Tensor":
+#         return permute(self)
+
+#     def item(self):
+#         return self.array.item()
+
+#     def sum(self, dim=None, keepdim=False):
+#         return sum(self, dim=dim, keepdim=keepdim)
+
+#     def log(self):
+#         return log(self)
+
+#     def exp(self):
+#         return exp(self)
+
+#     def reshape(self, new_shape):
+#         return reshape(self, new_shape)
+
+#     def expand(self, new_shape):
+#         return expand(self, new_shape)
+
+#     def permute(self, dims):
+#         return permute(self, dims)
+
+#     def maximum(self, other):
+#         return maximum(self, other)
+
+#     def relu(self):
+#         return relu(self)
+
+#     def argmax(self, dim=None, keepdim=False):
+#         return argmax(self, dim=dim, keepdim=keepdim)
+
+#     def uniform_(self, low: float, high: float) -> "Tensor":
+#         self.array[:] = np.random.uniform(low, high, self.array.shape)
+#         return self
+
+#     def backward(self, end_grad: Union[Arr, "Tensor", None] = None) -> None:
+#         if isinstance(end_grad, Arr):
+#             end_grad = Tensor(end_grad)
+#         return backprop(self, end_grad)
+
+#     def size(self, dim: Optional[int] = None):
+#         if dim is None:
+#             return self.shape
+#         return self.shape[dim]
+
+#     @property
+#     def shape(self):
+#         return self.array.shape
+
+#     @property
+#     def ndim(self):
+#         return self.array.ndim
+
+#     @property
+#     def is_leaf(self):
+#         '''Same as https://pytorch.org/docs/stable/generated/torch.Tensor.is_leaf.html'''
+#         if self.requires_grad and self.recipe and self.recipe.parents:
+#             return False
+#         return True
+
+#     def __bool__(self):
+#         if np.array(self.shape).prod() != 1:
+#             raise RuntimeError("bool value of Tensor with more than one value is ambiguous")
+#         return bool(self.item())
+
+# def empty(*shape: int) -> Tensor:
+#     '''Like torch.empty.'''
+#     return Tensor(np.empty(shape))
+
+
+# def zeros(*shape: int) -> Tensor:
+#     '''Like torch.zeros.'''
+#     return Tensor(np.zeros(shape))
+
+
+# def arange(start: int, end: int, step=1) -> Tensor:
+#     '''Like torch.arange(start, end).'''
+#     return Tensor(np.arange(start, end, step=step))
+
+
+# def tensor(array: Arr, requires_grad=False) -> Tensor:
+#     '''Like torch.tensor.'''
+#     return Tensor(array, requires_grad=requires_grad)
 
 # %%
 
@@ -251,6 +420,7 @@ def multiply_back1(grad_out: Arr, out: Arr, x: Union[Arr, float], y: Arr) -> Arr
 
 if MAIN:
     tests.test_multiply_back(multiply_back0, multiply_back1)
+    tests.test_multiply_back_float(multiply_back0, multiply_back1)
 
 # %%
 
@@ -281,14 +451,14 @@ if MAIN:
 
 class BackwardFuncLookup:
     def __init__(self) -> None:
-        self.d = defaultdict(dict)
+        self.back_funcs: defaultdict[Callable, dict[int, Callable]] = defaultdict(dict)
 
     def add_back_func(self, forward_fn: Callable, arg_position: int, back_fn: Callable) -> None:
-        self.d[forward_fn][arg_position] = back_fn
+        self.back_funcs[forward_fn][arg_position] = back_fn
 
     def get_back_func(self, forward_fn: Callable, arg_position: int) -> Callable:
-        # print("getting back func for", forward_fn, "arg_position", arg_position)
-        return self.d[forward_fn][arg_position]
+        # print("Fetching back func for", forward_fn, "arg_position", arg_position)
+        return self.back_funcs[forward_fn][arg_position]
 
 if MAIN:
     BACK_FUNCS = BackwardFuncLookup()
@@ -387,7 +557,7 @@ def wrap_forward_fn(numpy_func: Callable, is_differentiable=True) -> Callable:
 
         arg_arrays = [(a.array if isinstance(a, Tensor) else a) for a in args]
         out_arr = numpy_func(*arg_arrays, **kwargs)
-        
+    
         requires_grad = grad_tracking_enabled and is_differentiable and any([
             (isinstance(a, Tensor) and (a.requires_grad or a.recipe is not None)) for a in args
         ])
@@ -675,7 +845,7 @@ def sum_back(grad_out: Arr, out: Arr, x: Arr, dim=None, keepdim=False):
     
     # If grad_out is a scalar, we need to make it a tensor (so we can expand it later)
     if not isinstance(grad_out, Arr):
-        grad_out = Tensor(grad_out)
+        grad_out = np.array(grad_out)
     
     # If dim=None, this means we summed over all axes, and we want to repeat back to input shape
     if dim is None:
@@ -726,7 +896,46 @@ def getitem_back(grad_out: Arr, out: Arr, x: Arr, index: Index):
     '''
     new_grad_out = np.full_like(x, 0)
     np.add.at(new_grad_out, coerce_index(index), grad_out)
+    # try:
+    #     np.add.at(new_grad_out, coerce_index(index), grad_out)
+    # except:
+    #     print("This again...")
+    #     global wtf
+    #     wtf = [new_grad_out, coerce_index(index), grad_out]
+    #     np.add.at(new_grad_out, coerce_index(index), grad_out[0].array)
     return new_grad_out
+
+# def coerce_index(index: Index) -> Union[int, Tuple[int, ...], Tuple[Arr]]:
+#     '''
+#     If index is of type signature `Tuple[Tensor]`, converts it to `Tuple[Arr]`.
+#     '''
+#     if isinstance(index, Arr):
+#         return index
+#     if isinstance(index, Tensor):
+#         return index.array
+#     return index
+
+# def _getitem(x: Arr, index: Index) -> Arr:
+#     '''Like x[index] when x is a torch.Tensor.'''
+#     if isinstance(index, int):
+#         return x[index]
+#     else:
+#         unboxed = tuple([coerce_index(item) for item in index])
+#         return x[unboxed]
+
+# def getitem_back(grad_out: Arr, out: Arr, x: Arr, index: Index):
+#     '''Backwards function for _getitem.
+
+#     Hint: use np.add.at(a, indices, b)
+#     This function works just like a[indices] += b, except that it allows for repeated indices.
+#     '''
+#     out = np.zeros_like(x)
+#     if isinstance(index, int):
+#         np.add.at(out, index, grad_out)
+#     else:
+#         unboxed = tuple([coerce_index(item) for item in index])
+#         np.add.at(out, unboxed, grad_out)  # type: ignore
+#     return out
 
 if MAIN:
     getitem = wrap_forward_fn(_getitem)
@@ -966,16 +1175,18 @@ if MAIN:
 
 
 class Linear(Module):
+    weight: Parameter
+    bias: Optional[Parameter]
+    
     def __init__(self, in_features: int, out_features: int, bias=True):
         '''A simple linear (technically, affine) transformation.
 
         The fields should be named `weight` and `bias` for compatibility with PyTorch.
         If `bias` is False, set `self.bias` to None.
         '''
-        super().__init__()
         self.in_features = in_features
         self.out_features = out_features
-        self.bias = bias
+        super().__init__()
         
         # sf needs to be a float
         sf = in_features ** -0.5
@@ -996,7 +1207,7 @@ class Linear(Module):
         '''
         out = x @ self.weight.permute((1, 0))
         if self.bias is not None: 
-            out += self.bias
+            out = out + self.bias
         return out
 
     def extra_repr(self) -> str:
@@ -1057,8 +1268,8 @@ class NoGrad:
 # %%
 
 if MAIN:
-    (train_loader, test_loader) = utils.get_mnist(20)
-utils.visualize(train_loader)
+    (train_loader, test_loader) = utils.get_mnist()
+    utils.visualize(train_loader)
 
 class SGD:
     def __init__(self, params: Iterable[Parameter], lr: float):
@@ -1078,28 +1289,20 @@ class SGD:
                 p.add_(p.grad, -self.lr)
 
 
-def train(model, train_loader, optimizer, epoch):
-    for (batch_idx, (data, target)) in enumerate(train_loader):
+def train(model: MLP, train_loader, optimizer, epoch):
+    progress_bar = tqdm(enumerate(train_loader))
+    for (batch_idx, (data, target)) in progress_bar:
         data = Tensor(data.numpy())
         target = Tensor(target.numpy())
         optimizer.zero_grad()
         output = model(data)
         loss = cross_entropy(output, target).sum() / len(output)
         loss.backward()
+        progress_bar.set_description(f"Avg loss: {loss.item():.3f}")
         optimizer.step()
-        if batch_idx % 50 == 0:
-            print(
-                "Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}".format(
-                    epoch,
-                    batch_idx * len(data),
-                    len(train_loader.dataset),
-                    100.0 * batch_idx / len(train_loader),
-                    loss.item(),
-                )
-            )
 
 
-def test(model, test_loader):
+def test(model: MLP, test_loader):
     test_loss = 0
     correct = 0
     with NoGrad():
@@ -1111,36 +1314,20 @@ def test(model, test_loader):
             pred = output.argmax(dim=1, keepdim=True)
             correct += (pred == target.reshape(pred.shape)).sum().item()
     test_loss /= len(test_loader.dataset)
-    print(
-        "\nTest set: Average loss: {:.4f}, Accuracy: {}/{} ({:.0f}%)\n".format(
-            test_loss, correct, len(test_loader.dataset), 100.0 * correct / len(test_loader.dataset)
-        )
-    )
+    print(f"Test set: Avg loss: {test_loss:.4f}, Accuracy: {correct}/{len(test_loader.dataset)} ({correct / len(test_loader.dataset):.1%})")
 
 # %%
 
-# Error - still some things going wrong on this last loop which need to be fixed
-
-# if MAIN:
-#     num_epochs = 5
-#     model = MLP()
-#     start = time.time()
-#     optimizer = SGD(model.parameters(), 0.01)
-#     for epoch in range(num_epochs):
-#         train(model, train_loader, optimizer, epoch)
-#         test(model, test_loader)
-#         optimizer.step()
-#     print(f"Completed in {time.time() - start: .2f}s")
+if MAIN:
+    num_epochs = 5
+    model = MLP()
+    start = time.time()
+    optimizer = SGD(model.parameters(), 0.01)
+    for epoch in range(num_epochs):
+        train(model, train_loader, optimizer, epoch)
+        test(model, test_loader)
+        optimizer.step()
+    print(f"\nCompleted in {time.time() - start: .2f}s")
 
 # %%
 
-num_epochs = 5
-model = MLP()
-start = time.time()
-optimizer = SGD(model.parameters(), 0.01)
-for epoch in range(num_epochs):
-    train(model, train_loader, optimizer, epoch)
-    test(model, test_loader)
-    optimizer.step()
-print(f"Completed in {time.time() - start: .2f}s")
-# %%

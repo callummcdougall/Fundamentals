@@ -1,3 +1,5 @@
+# %%
+
 import torch
 import torch.utils.data
 from torchvision import datasets, transforms
@@ -13,7 +15,7 @@ Arr = np.ndarray
 
 def visualize(dataloader):
     (sample, sample_labels) = next(iter(dataloader))
-        
+    
     fig = make_subplots(
         rows=2, cols=5,
         horizontal_spacing=0.02, vertical_spacing=0.02,
@@ -23,16 +25,16 @@ def visualize(dataloader):
         for col in range(5):
             z = repeat((255 * (0.28 + 0.35*sample[5*row+col, 0])).numpy().astype(int), "h w -> h w 3")
             fig.add_trace(go.Image(z=z), row=row+1, col=col+1)
-            
+    
     fig.update_xaxes(showticklabels=False).update_yaxes(showticklabels=False)
     fig.update_layout(margin=dict(t=50, b=0, r=20, l=20))
 
     fig.show(config={'displayModeBar': False})
 
 def get_mnist(subsample: Optional[int] = None):
-    """Return MNIST data using the provided Tensor class."""
-    mnist_train = datasets.MNIST("../data", train=True, download=True)
-    mnist_test = datasets.MNIST("../data", train=False)
+    '''Return MNIST data using the provided Tensor class.'''
+    mnist_train = datasets.MNIST("./data", train=True, download=True)
+    mnist_test = datasets.MNIST("./data", train=False)
     if subsample is None:
         subsample = 1
     print("Preprocessing data...")
@@ -54,3 +56,10 @@ def get_mnist(subsample: Optional[int] = None):
     train_loader = torch.utils.data.DataLoader(train_tensors, shuffle=True, batch_size=512)
     test_loader = torch.utils.data.DataLoader(test_tensors, batch_size=512)
     return train_loader, test_loader
+
+# %%
+
+a, b = get_mnist()
+# %%
+len(a)
+# %%

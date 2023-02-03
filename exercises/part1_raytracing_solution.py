@@ -79,10 +79,10 @@ if MAIN:
         L_1, L_2 = t.rand(2, 2)
         P = lambda v: L_1 + v * (L_2 - L_1)
         x, y = zip(P(-2), P(2))
-        with fig.batch_update():
-            fig.data[0].update({"x": x, "y": y})
-            fig.data[1].update({"x": [L_1[0], L_2[0]], "y": [L_1[1], L_2[1]]})
-            fig.data[2].update({"x": [P(v.value)[0]], "y": [P(v.value)[1]]})
+        with fig.batch_update(): 
+            fig.data[0].update({"x": x, "y": y}) 
+            fig.data[1].update({"x": [L_1[0], L_2[0]], "y": [L_1[1], L_2[1]]}) 
+            fig.data[2].update({"x": [P(v.value)[0]], "y": [P(v.value)[1]]}) 
         
     v.observe(response)
     seed.observe(response)
@@ -213,7 +213,7 @@ if MAIN:
 
 # %%
 
-def make_rays_2d(num_pixels_y: int, num_pixels_z, y_limit: float, z_limit: float) -> t.Tensor:
+def make_rays_2d(num_pixels_y: int, num_pixels_z: int, y_limit: float, z_limit: float) -> t.Tensor:
     '''
     num_pixels_y: The number of pixels in the y dimension
     num_pixels_z: The number of pixels in the z dimension
@@ -262,9 +262,7 @@ if MAIN:
 
     def response(change):
         P = A + u.value * (B - A) + v.value * (C - A)
-        with fig.batch_update():
-            fig.data[2].x = [P[0]]
-            fig.data[2].y = [P[1]]
+        fig.data[2].update({"x": [P[0]], "y": [P[1]]})
         
     u.observe(response)
     v.observe(response)
@@ -302,9 +300,9 @@ if MAIN:
 
 
 def raytrace_triangle(
-    rays: TT["nrays", "points": 2, "ndims": 3], 
-    triangle: TT["npoints": 3, "ndims": 3]
-) -> TT["nrays", bool]:
+    rays: t.Tensor, #TT["nrays", "points": 2, "ndims": 3], 
+    triangle: t.Tensor, #TT["npoints": 3, "ndims": 3]
+) -> t.Tensor: #TT["nrays", bool]:
     '''
     For each ray, return True if the triangle intersects that ray.
     '''
@@ -349,7 +347,7 @@ if MAIN:
 
     test_triangle = t.stack([A, B, C], dim=0)
     rays2d = make_rays_2d(num_pixels_y, num_pixels_z, y_limit, z_limit)
-    triangle_lines = t.stack([A, B, B, C, A, C], dim=0).reshape(-1, 2, 3)
+    triangle_lines = t.stack([A, B, C, A], dim=0).reshape(-1, 2, 3)
     render_lines_with_plotly(rays2d, triangle_lines)
     intersects = raytrace_triangle(rays2d, test_triangle)
     img = intersects.reshape(num_pixels_y, num_pixels_z)
