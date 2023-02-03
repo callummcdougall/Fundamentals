@@ -1,16 +1,24 @@
+# %%
+
 from einops import rearrange
 import torch as t
 from torch import nn
+from dataclasses import dataclass
+import torchvision
 from torchvision import datasets, transforms
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 from typing import List
 import PIL
+from PIL import Image
 from typing import Callable
+import plotly.express as px
 
-from chapter0_prerequisites.w0d2_solutions import ReLU, Conv2d, MaxPool2d, Flatten, Linear
+from part2_cnns_solutions import ReLU, Conv2d, MaxPool2d, Flatten, Linear
 
 MAIN = __name__ == "__main__"
+
+# %%
 
 class ConvNet(nn.Module):
     def __init__(self):
@@ -37,6 +45,111 @@ class ConvNet(nn.Module):
 if MAIN:
     model = ConvNet()
     print(model)
+
+# %%
+
+if MAIN:
+    mnist_transform = transforms.Compose([
+        transforms.ToTensor(),
+        transforms.Normalize((0.1307,), (0.3081,))
+    ])
+
+    mnist_trainset = datasets.MNIST(root="./data", train=True, transform=mnist_transform, download=True)
+    mnist_trainloader = DataLoader(mnist_trainset, batch_size=64, shuffle=True)
+
+    mnist_testset = datasets.MNIST(root="./data", train=False, transform=mnist_transform, download=True)
+    mnist_testloader = DataLoader(mnist_testset, batch_size=64, shuffle=True)
+
+# %%
+
+@dataclass
+class ConvNetTrainingArgs():
+    epochs: int = 3
+    batch_size: int = 512
+    loss_fn: Callable = nn.CrossEntropyLoss()
+    device: str = "cuda" if t.cuda.is_available() else "cpu"
+    filename_save_model: str = "./part2_cnn_model.pt"
+
+# %%
+
+def train_convnet(args: ConvNetTrainingArgs):
+    '''
+    Defines a ConvNet using our previous code, and trains it on the data in trainloader.
+    
+    Returns tuple of (loss_list, accuracy_list), where accuracy_list contains the fraction of accurate classifications on the test set, at the end of each epoch.
+    '''
+
+    trainloader = DataLoader(mnist_trainset, batch_size=args.batch_size, shuffle=True)
+    testloader = DataLoader(mnist_testset, batch_size=args.batch_size, shuffle=True)
+
+    model = ConvNet().to(args.device).train()
+    optimizer = t.optim.Adam(model.parameters())
+    loss_list = []
+    accuracy_list = []
+    
+    for epoch in range(args.epochs):
+
+        progress_bar = tqdm(trainloader)
+        for (x, y) in progress_bar:
+            
+            x = x.to(args.device)
+            y = y.to(args.device)
+            
+            y_hat = model(x)
+            loss = args.loss_fn(y_hat, y)
+            loss.backward()
+            optimizer.step()
+            optimizer.zero_grad()
+            
+            loss_list.append(loss.item())
+
+            progress_bar.set_description(f"Epoch {epoch+1}/{args.epochs}, Loss = {loss:.3f}")
+        
+        with t.inference_mode():
+            
+            accuracy = 0
+            total = 0
+            
+            for (x, y) in testloader:
+
+                x = x.to(args.device)
+                y = y.to(args.device)
+
+                y_hat = model(x)
+                y_predictions = y_hat.argmax(-1)
+                accuracy += (y_predictions == y).sum().item()
+                total += y.size(0)
+
+            accuracy_list.append(accuracy/total)
+            
+        print(f"Train loss = {loss:.6f}, Accuracy = {accuracy}/{total}")
+    
+    print(f"Saving model to: {args.filename_save_model}")
+    t.save(model, args.filename_save_model)
+    return loss_list, accuracy_list
+
+# %%
+
+if MAIN:
+    args = ConvNetTrainingArgs()
+    loss_list, accuracy_list = train_convnet(args)
+
+# %%
+
+if MAIN:
+    px.line(
+        y=loss_list, 
+        title="Training loss for CNN, on MNIST data",
+        labels={"x": "Batch number", "y": "Cross entropy loss"}
+    ).show()
+    px.line(
+        y=accuracy_list, x=range(1, 4),
+        title="Training accuracy for CNN, on MNIST data",
+        labels={"x": "Epoch", "y": "Accuracy"},
+        template="ggplot2"
+    ).show()
+
+# %%
 
 class Sequential(nn.Module):
     def __init__(self, *modules: nn.Module):
@@ -175,6 +288,7 @@ class BlockGroup(nn.Module):
         """
         return self.blocks(x)
 
+# %%
 
 
 class ResNet34(nn.Module):
@@ -229,6 +343,55 @@ class ResNet34(nn.Module):
         x = self.out_layers(x)
         return x
 
+if MAIN:
+    my_resnet = ResNet34()
+    pretrained_resnet = torchvision.models.resnet34()
+
+# %%
+
+def copy_weights(myresnet: ResNet34, pretrained_resnet: torchvision.models.resnet.ResNet) -> ResNet34:
+    '''Copy over the weights of `pretrained_resnet` to your resnet.'''
+
+    mydict = myresnet.state_dict()
+    pretraineddict = pretrained_resnet.state_dict()
+
+    # Check the number of params/buffers is correct
+    assert len(mydict) == len(pretraineddict), "Number of layers is wrong. Have you done the prev step correctly?"
+
+    # Initialise an empty dictionary to store the correct key-value pairs
+    state_dict_to_load = {}
+
+    for (mykey, myvalue), (pretrainedkey, pretrainedvalue) in zip(mydict.items(), pretraineddict.items()):
+        state_dict_to_load[mykey] = pretrainedvalue
+
+    myresnet.load_state_dict(state_dict_to_load)
+
+    return myresnet
+
+if MAIN:
+    myresnet = copy_weights(my_resnet, pretrained_resnet)
+
+# %%
+
+if MAIN:
+    IMAGE_FILENAMES = [
+        "chimpanzee.jpg",
+        "golden_retriever.jpg",
+        "platypus.jpg",
+        "frogs.jpg",
+        "fireworks.jpg",
+        "astronaut.jpg",
+        "iguana.jpg",
+        "volcano.jpg",
+        "goofy.jpg",
+        "dragonfly.jpg",
+    ]
+
+    IMAGE_FOLDER = "./resnet_inputs"
+
+    images = [Image.open(f"{IMAGE_FOLDER}/{filename}") for filename in IMAGE_FILENAMES]
+
+# %%
 
 if MAIN:
     # ImageNet transforms:
@@ -238,6 +401,7 @@ if MAIN:
         transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
     ])
 
+# %%
 
 def prepare_data(images: List[PIL.Image.Image]) -> t.Tensor:
     """
@@ -246,73 +410,8 @@ def prepare_data(images: List[PIL.Image.Image]) -> t.Tensor:
     x = t.stack([transform(img) for img in images], dim=0)  # type: ignore
     return x
 
-
-
-
-# ================================= ConvNet training & testing =================================
-
 if MAIN:
-    epochs = 3
-    loss_fn = nn.CrossEntropyLoss()
-    batch_size = 128
+    prepared_images = prepare_data(images)
 
-    MODEL_FILENAME = "./w0d3_convnet_mnist.pt"
-    device = "cuda" if t.cuda.is_available() else "cpu"
+# %%
 
-    trainset = datasets.MNIST(root="./data", train=True, transform=transform, download=True)
-    trainloader = DataLoader(trainset, batch_size=64, shuffle=True)
-    testset = datasets.MNIST(root="./data", train=False, transform=transform, download=True)
-    testloader = DataLoader(testset, batch_size=64, shuffle=True)
-
-def train_convnet(trainloader: DataLoader, testloader: DataLoader, epochs: int, loss_fn: Callable) -> list:
-    """
-    Defines a ConvNet using our previous code, and trains it on the data in trainloader.
-    
-    Returns tuple of (loss_list, accuracy_list), where accuracy_list contains the fraction of accurate classifications on the test set, at the end of each epoch.
-    """
-    
-    model = ConvNet().to(device).train()
-    optimizer = t.optim.Adam(model.parameters())
-    loss_list = []
-    accuracy_list = []
-    
-    for epoch in tqdm(range(epochs)):
-        
-        for (x, y) in tqdm(trainloader, leave=False):
-            
-            x = x.to(device)
-            y = y.to(device)
-            
-            optimizer.zero_grad()
-            y_hat = model(x)
-            loss = loss_fn(y_hat, y)
-            loss.backward()
-            optimizer.step()
-            
-            loss_list.append(loss.item())
-        
-        with t.inference_mode():
-            
-            accuracy = 0
-            total = 0
-            
-            for (x, y) in testloader:
-
-                x = x.to(device)
-                y = y.to(device)
-
-                y_hat = model(x)
-                y_predictions = y_hat.argmax(1)
-                accuracy += (y_predictions == y).sum().item()
-                total += y.size(0)
-
-            accuracy_list.append(accuracy/total)
-            
-        print(f"Epoch {epoch+1}/{epochs}, train loss is {loss:.6f}, accuracy is {accuracy}/{total}")
-    
-    print(f"Saving model to: {MODEL_FILENAME}")
-    t.save(model, MODEL_FILENAME)
-    return loss_list, accuracy_list
-
-if MAIN:
-    loss_list, accuracy_list = train_convnet(trainloader, testloader, epochs, loss_fn)

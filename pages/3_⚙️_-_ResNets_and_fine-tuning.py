@@ -21,9 +21,9 @@ In part 2, we'll start by defining a few more important modules (e.g. `BatchNorm
 
 This section should take approximately **2-3 hours**.
 
-## 3️⃣ Finetuning ResNet
+## 3️⃣ Finetuning ResNet (bonus)
 
-Finally, in part 3 we'll finetune our ResNet. This involves taking a pretrained model, and training it to perform a slightly different task (sometimes altering the architecture at the end of the model, and only training that part while freezing the rest). We've given much less guidance for this section, since it builds on all the previous sections.
+If you get to part 3, this is an opportunity to try finetuning your ResNet. Finetuning involves taking a pretrained model, and training it to perform a slightly different task (sometimes altering the architecture at the end of the model, and only training that part while freezing the rest). We've given much less guidance for this section, since it builds on all the previous sections.
 
 This section may take quite a long time to finish, and you're encouraged to go further with it over the next couple of days if it seems exciting to you.
 
@@ -42,7 +42,13 @@ def section_cnn():
     <li><a class="contents-el" href="#convnet">ConvNet</a></li>
     <li><a class="contents-el" href="#transforms">Transforms</a></li>
     <li><ul class="contents">
-        <li><a class="contents-el" href="#interlude-tqdm">Interlude - <code>tqdm</code></a></li>
+        <li><a class="contents-el" href="#aside-tqdm">Aside - <code>tqdm</code></a></li>
+        <li><a class="contents-el" href="#aside-device">Aside - <code>device</code></a></li>
+    </li></ul>
+    <li><a class="contents-el" href="#training-loop">Training loop</a></li>
+    <li><ul class="contents">
+        <li><a class="contents-el" href="#aside-dataclasses">Aside - <code>dataclasses</code></a></li>
+        <li><a class="contents-el" href="#other-notes-on-this-code">Other notes on this code</a></li>
     </li></ul>
 </ul>
 """, unsafe_allow_html=True)
@@ -58,15 +64,17 @@ import torch as t
 import torchvision
 from torchvision import datasets, transforms
 from torch.utils.data import DataLoader
+from dataclasses import dataclass
 import PIL
 from PIL import Image
 import json
-from pathlib import Path
 from typing import Union, Tuple, Callable, Optional
 import plotly.graph_objects as go
 import plotly.express as px
 from plotly.subplots import make_subplots
-import utils
+
+import part3_resnets_utils as utils
+import part3_resnets_tests as tests
 ```
 
 ## ConvNet
@@ -112,7 +120,10 @@ class ConvNet(nn.Module):
     def forward(self, x: t.Tensor) -> t.Tensor:
         pass
 
-model = ConvNet()
+
+if MAIN:
+    model = ConvNet()
+    print(model)
 ```
 
 Note - rather than defining your network this way, it would be possible to just wrap everything inside an `nn.Sequential`. For simple examples like this, both ways work just fine. However, for more complicated architectures involving nested components and multiple different branches of computation (e.g. the ResNet we'll be building later today), there will be major advantages to building your network in this way.
@@ -143,14 +154,14 @@ Before we use this model to make any predictions, we first need to think about o
 from torchvision import datasets, transforms
 from torch.utils.data import DataLoader
 
-transform = transforms.Compose([
-    transforms.ToTensor(),
-    transforms.Normalize((0.1307,), (0.3081,))
-])
+if MAIN:
+    mnist_transform = transforms.Compose([
+        transforms.ToTensor(),
+        transforms.Normalize((0.1307,), (0.3081,))
+    ])
 
-trainset = datasets.MNIST(root="./data", train=True, transform=transform, download=True)
-
-trainloader = DataLoader(trainset, batch_size=64, shuffle=True)
+    mnist_trainset = datasets.MNIST(root="./data", train=True, transform=mnist_transform, download=True)
+    mnist_trainloader = DataLoader(mnist_trainset, batch_size=64, shuffle=True)
 ```
 
 The `torchvision` package consists of popular datasets, model architectures, and common image transformations for computer vision. `transforms` is a library from `torchvision` which provides access to a suite of functions for preprocessing data. The three functions used here are:
@@ -224,7 +235,7 @@ You should play around with the objects defined above (i.e. `trainset` and `trai
     with st.expander(r"""Question - what is the benefit of using shuffle=True? i.e. what might the problem be if we didn't do this?"""):
         st.markdown(r"""Shuffling is done during the training to make sure we aren't exposing our model to the same cycle (order) of data in every epoch. It is basically done to ensure the model isn't adapting its learning to any kind of spurious pattern.""")
 
-    st.markdown(r"""### Interlude - `tqdm`
+    st.markdown(r"""### Aside - `tqdm`
 
 You might have seen some blue progress bars running when you first downloaded your MNIST data. These were generated using a library called `tqdm`, which is also a really useful tool when training models or running any process that takes a long period of time. 
 
@@ -255,7 +266,7 @@ for (x, y) in dataloader:
     progress_bar.set_description(f"Training loss = {loss}")
 ```
 
-One gotcha when it comes to `tqdm` - if you use it to wrap around an object with no well-defined length (e.g. an enumerator), it won't know what the progress bar total is. For instance, this cell won't work as intended:
+One gotcha when it comes to `tqdm` - if you use it to wrap around an object with no well-defined length (e.g. an enumerator), it won't know what the progress bar total is. For instance, you can run this cell to verify it won't work as intended:
 
 ```python
 for i in tqdm_notebook(enumerate(range(100))):
@@ -272,6 +283,8 @@ If this still doesn't work, then instead of `tqdm.notebook.tqdm_notebook` try us
 """)
 
     st.markdown(r"""
+### Aside - `device`
+
 One last thing to discuss before we move onto training our model: **GPUs**. We'll discuss this in a little more detail in the next set of exercises (Training & Optimization). For now, [this page](https://wandb.ai/wandb/common-ml-errors/reports/How-To-Use-GPU-with-PyTorch---VmlldzozMzAxMDk) should provide a basic overview of how to use your GPU. A few things to be aware of here:
 
 * The `to` method is really useful here - it can move objects between different devices (i.e. CPU and GPU) *as well as* changing a tensor's datatype.
@@ -283,67 +296,77 @@ device = t.device('cuda:0' if t.cuda.is_available() else 'cpu')
 # Assuming that we are on a CUDA machine, this should print a CUDA device:
 print(device)
 ```
-""")
-    with st.columns(1)[0]:
-        st.markdown(r"""
-#### Exercise - running a training loop
+
+## Training loop
 
 Finally, we'll now build our training loop. The one below is actually constructed for you rather than left as an exercise, but you should make sure that you understand the purpose of every line below, because soon you'll be adding to it, and making your own training loops for different architectures.
 
 ```python
-epochs = 3
-loss_fn = nn.CrossEntropyLoss()
-batch_size = 128
+@dataclass
+class ConvNetTrainingArgs():
+    epochs: int = 3
+    batch_size: int = 512
+    loss_fn: Callable = nn.CrossEntropyLoss()
+    device: str = "cuda" if t.cuda.is_available() else "cpu"
+    filename_save_model: str = "./part2_cnn_model.pt"
 
-MODEL_FILENAME = "./w1d2_convnet_mnist.pt"
-device = "cuda" if t.cuda.is_available() else "cpu"
 
-def train_convnet(trainloader: DataLoader, epochs: int, loss_fn: Callable) -> list:
+def train_convnet(args: ConvNetTrainingArgs):
     '''
     Defines a ConvNet using our previous code, and trains it on the data in trainloader.
-    '''
     
-    model = ConvNet().to(device).train()
+    Returns loss_list, the list of cross entropy losses computed on each batch.
+    '''
+    trainloader = DataLoader(mnist_trainset, batch_size=args.batch_size, shuffle=True)
+
+    model = ConvNet().to(args.device).train()
     optimizer = t.optim.Adam(model.parameters())
     loss_list = []
     
-    for epoch in range(epochs):
-        
-        progress_bar = tqdm_notebook(trainloader)
+    for epoch in range(args.epochs):
+
+        progress_bar = tqdm(trainloader)
         for (x, y) in progress_bar:
             
-            x = x.to(device)
-            y = y.to(device)
+            x = x.to(args.device)
+            y = y.to(args.device)
             
+            optimizer.zero_grad()
             y_hat = model(x)
-            loss = loss_fn(y_hat, y)
+            loss = args.loss_fn(y_hat, y)
             loss.backward()
             optimizer.step()
-            optimizer.zero_grad()
             
             loss_list.append(loss.item())
 
-            progress_bar.set_description(f"Epoch = {epoch}, Loss = {loss.item():.4f}")
-            
-    print(f"Saving model to: {MODEL_FILENAME}")
-    t.save(model, MODEL_FILENAME)
-    return loss_list
+            progress_bar.set_description(f"Epoch {epoch+1}/{args.epochs}, Loss = {loss:.3f}")
+    
+    print(f"Saving model to: {args.filename_save_model}")
+    t.save(model, args.filename_save_model)
+    return loss_list, accuracy_list
 
-loss_list = train_convnet(trainloader, epochs, loss_fn)
 
-fig = px.line(y=loss_list, template="simple_white")
-fig.update_layout(title="Cross entropy loss on MNIST", yaxis_range=[0, max(loss_list)])
-fig.show()
+if MAIN:
+    args = ConvNetTrainingArgs()
+    loss_list, accuracy_list = train_convnet(args)
+
+    px.line(
+        y=loss_list, 
+        title="Training loss for CNN, on MNIST data",
+        labels={"x": "Batch number", "y": "Cross entropy loss"}
+    ).show()
 ```
 """)
     st.markdown(r"""
 We've seen most of these components before over the last few days. The most important lines to go over are these five:
 
-    y_hat = model(x)
-    loss = loss_fn(y_hat, y)
-    loss.backward()
-    optimizer.step()
-    optimizer.zero_grad()
+```python
+y_hat = model(x)
+loss = args.loss_fn(y_hat, y)
+loss.backward()
+optimizer.step()
+optimizer.zero_grad()
+```
 
 An explanation of these five lines:
 
@@ -354,24 +377,34 @@ An explanation of these five lines:
     * If you're interested in the intuition behind cross entropy as a loss function, see [this post on KL divergence](https://www.lesswrong.com/posts/no5jDTut5Byjqb4j5/six-and-a-half-intuitions-for-kl-divergence) (note that KL divergence and cross entropy differ by a value which is independent of our model's predictions, so cross entropy minimisation and KL divergence minimisation are equivalent).
 * `loss.backward()` is how we propagate the gradients backwards through our network for, to perform gradient descent.
 * `optimizer.step()` updates the gradients.
-* `optimizer.zero_grad()` makes sure that the gradients of all `model.parameters()` are zero, i.e. they don't just keep accumulating from previous inputs.
+* `optimizer.zero_grad()` makes sure that the gradients of all `model.parameters()` are zero, i.e. they don't just keep accumulating from previous inputs. (Note, sometimes people put this line at the start of the loop rather than the end, this is also valid.)
 
-A few other notes:
+### Aside - `dataclasses`
+
+Using dataclasses for creating or training models is a very useful way to keep your code clean. If your dataclasses have default arguments, then you can instantiate them and then change the arguments you want to change, e.g.:
+
+```python
+args = ConvNetTrainingArgs()
+args.epochs = 10
+args.batch_size = 256
+```
+
+This keeps all your arguments in one easy-to-track place. Also, if you're using code autocomplete on VSCode, just typing `args.` will let you tab in the appropriate argument, which is pretty handy!
+
+### Other notes on this code
 
 * The `train()` method used when defining models changes the behaviour of certain types of layers, e.g. batch norm and dropout. We don't have either of these types of layers present in our model, but we'll need to use this later today when we work with ResNets.
 * We used `torch.optim.Adam` as an optimiser. We'll discuss optimisers in more detail in the next set of exercises, but for now it's enough to know that Adam is a gradient descent optimisation algorithm which empirically performs much better than simpler algorithms like SGD.
 * The `.item()` method can be used on one-element tensors, and returns their value as a standard Python number.
 * The `torch.save` function takes in a model and a filename, and saves that model (including the values of all its parameters). Common filename extensions for PyTorch models are `.pt` and `.pth`.
-* The code at the end plots the training loss over time. We can see that it very quickly decays to zero. 
 """)
     with st.columns(1)[0]:
         st.markdown(r"""
 #### Exercise - add testing
 
-Edit the `train_convnet` function so that, at the end of each epoch, it returns the accuracy of your model on a test set. A few things you'll need to keep in mind while doing this:
+Edit the `train_convnet` function so that, at the end of each epoch, it returns the accuracy of your model on a test set.
 
-* We've already defined `trainset` and `trainloader`. You'll want to define `testset` and `testloader` in a similar way (although you'll need to change the argument to `train=False` when defining `testset`; this means you get a different set of inputs.
-* We can get predictions from our model by taking argmax over the outputs
+*(Note - you can define `mnist_testset` and `mnist_trainset` in a similar way as for your training data, with the added argument `train=False` when defining `mnist_testset`; this means you get a different set of inputs.)*
 
 Below, we've also included a function which plots the loss and test set accuracy on the same graph, just to help you verify that your function is behaving as expected.
 
@@ -382,17 +415,84 @@ def train_convnet(trainloader: DataLoader, testloader: DataLoader, epochs: int, 
     
     Returns tuple of (loss_list, accuracy_list), where accuracy_list contains the fraction of accurate classifications on the test set, at the end of each epoch.
     '''
+    pass
 
-loss_list, accuracy_list = train_convnet(trainloader, testloader, epochs, loss_fn)
 
-utils.plot_loss_and_accuracy(loss_list, accuracy_list)
+if MAIN:
+    args = ConvNetTrainingArgs()
+    loss_list, accuracy_list = train_convnet(args)
+```
 """)
 
         with st.expander(r"""Help - I get `RuntimeError: expected scalar type Float but found Byte`."""):
-            st.markdown(r"""This is commonly because one of your operations is between tensors with the wrong datatypes (e.g. `int` and `float`). Try navigating to the error line and checking your dtypes (or using VSCode's built-in debugger).""")
+            st.markdown(r"""
+This is commonly because one of your operations is between tensors with the wrong datatypes (e.g. `int` and `float`). Try navigating to the error line and checking your dtypes (or using VSCode's built-in debugger).
+""")
 
         with st.expander(r"""Help - I'm not sure how to calculate accuracy."""):
-            st.markdown(r"""You can get your model's predictions using `y_predictions = y_hat.argmax(1)` (which means taking the argmax along the 1st dimension). Then, `(y_predictions == y)` will be a boolean array, and the accuracy for this epoch will be equal to the fraction of elements of this array that are `True`.""")
+            st.markdown(r"""
+Recall that your model's outputs are a tensor of shape `(batch_size, 10 = num_classifications)`. You can get your model's predictions using `y_predictions = y_hat.argmax(1)` (which means taking the argmax along the 1st dimension). Then, `(y_predictions == y)` will be a boolean array, and the accuracy for this epoch will be equal to the fraction of elements of this array that are `True`.
+""")
+        with st.expander("Example solution"):
+            st.markdown(r"""
+```python
+def train_convnet(args: ConvNetTrainingArgs):
+    '''
+    Defines a ConvNet using our previous code, and trains it on the data in trainloader.
+    
+    Returns tuple of (loss_list, accuracy_list), where accuracy_list contains the fraction of accurate classifications on the test set, at the end of each epoch.
+    '''
+
+    trainloader = DataLoader(mnist_trainset, batch_size=args.batch_size, shuffle=True)
+    testloader = DataLoader(mnist_testset, batch_size=args.batch_size, shuffle=True)
+
+    model = ConvNet().to(args.device).train()
+    optimizer = t.optim.Adam(model.parameters())
+    loss_list = []
+    accuracy_list = []
+    
+    for epoch in range(args.epochs):
+
+        progress_bar = tqdm(trainloader)
+        for (x, y) in progress_bar:
+            
+            x = x.to(args.device)
+            y = y.to(args.device)
+            
+            y_hat = model(x)
+            loss = args.loss_fn(y_hat, y)
+            loss.backward()
+            optimizer.step()
+            optimizer.zero_grad()
+            
+            loss_list.append(loss.item())
+
+            progress_bar.set_description(f"Epoch {epoch+1}/{args.epochs}, Loss = {loss:.3f}")
+        
+        with t.inference_mode():
+            
+            accuracy = 0
+            total = 0
+            
+            for (x, y) in testloader:
+
+                x = x.to(args.device)
+                y = y.to(args.device)
+
+                y_hat = model(x)
+                y_predictions = y_hat.argmax(-1)
+                accuracy += (y_predictions == y).sum().item()
+                total += y.size(0)
+
+            accuracy_list.append(accuracy/total)
+            
+        print(f"Train loss = {loss:.6f}, Accuracy = {accuracy}/{total}")
+    
+    print(f"Saving model to: {args.filename_save_model}")
+    t.save(model, args.filename_save_model)
+    return loss_list, accuracy_list
+```
+""")
  
 def section_resnet():
     st.sidebar.markdown(r"""
@@ -535,9 +635,9 @@ class BatchNorm2d(nn.Module):
         pass
 
 if MAIN:
-    utils.test_batchnorm2d_module(BatchNorm2d)
-    utils.test_batchnorm2d_forward(BatchNorm2d)
-    utils.test_batchnorm2d_running_mean(BatchNorm2d)
+    tests.test_batchnorm2d_module(BatchNorm2d)
+    tests.test_batchnorm2d_forward(BatchNorm2d)
+    tests.test_batchnorm2d_running_mean(BatchNorm2d)
 ```
 
 ### Implementing `nn.AveragePool`
@@ -597,12 +697,13 @@ It's important for the size of the output of the left and right tracks to be the
     with st.expander(r"""Help - I'm completely stuck on parts of the architecture."""):
         st.markdown(r"""In this case, you can use the following code to import your own `resnet34`, and inspect its architecture:
 
-```python    
-from torchvision.models import resnet34
+```python
+if MAIN:
+    from torchvision.models import resnet34
 
-model = resnet34()
+    model = resnet34()
 
-print(model)
+    print(model)
 ```
 
 This will generate output that looks like:
@@ -699,6 +800,11 @@ class ResNet34(nn.Module):
         Return: shape (batch, n_classes)
         '''
         pass
+
+
+if MAIN:
+    my_resnet = ResNet34()
+    pretrained_resnet = torchvision.models.resnet34()
 ```
 
 Now that you've built your `ResNet34`, we'll copy weights over from PyTorch's pretrained resnet to yours. This is a good way to verify that you've designed the architecture correctly (since this won't work otherwise).
@@ -713,12 +819,9 @@ In order to make sure there is a 1-1 correspondence between your model and PyTor
     * Again, there won't be an exact matching. For instance, you might find that your names are longer than PyTorch's names if you used `Sequential` blocks where PyTorch's implementation didn't). However, they should still be similar. Specific things to check for include:
         * The PyTorch equivalents of `BlockGroup` are named `layer1`, `layer2`, etc (this should be apparent from the output of `torchvision.models.resnet34().state_dict()`). Do the places where the layer number changes match up with yours?
         * If you named the buffers in your `BatchNorm2d` module correctly, then you should see your `running_mean` and `running_var` line up with the `running_mean` and `running_var` for the PyTorch model.
-    * One helpful way to compare the names of your model and PyTorch's model is to display them side by side, as columns in a dataframe. If you get stuck, you can use `utils.print_param_count`, which should print out a color-coded dataframe that helps you compare parameter counts. You can look in `utils.py` to see how this function works (basically it constructs the dataframe by looping over `model.state_dict()`). You should produce output which looks like this (save for possibly different layer names in the first column):
+    * One helpful way to compare the names of your model and PyTorch's model is to display them side by side, as columns in a dataframe. If you get stuck, you can use `utils.print_param_count`, which should print out a color-coded dataframe that helps you compare parameter counts. You can look in `part3_resnets_utils.py` to see how this function works (basically it constructs the dataframe by looping over `model.state_dict()`). You should produce output which looks like this (save for possibly different layer names in the first column):
         ```python
-        my_resnet = ResNet34()
-        imported_resnet = torchvision.models.resnet34()
-
-        utils.print_param_count(my_resnet, imported_resnet)
+        utils.print_param_count(my_resnet, pretrained_resnet)
         ```
 """)
 
@@ -735,10 +838,10 @@ This is designed to be pretty tedious, so once you've attempted it for a while, 
     st.markdown(r"""Once you've verified that your model's layers match up with PyTorch's implementation, you can copy the weights across using the function below (make sure you understand how it works before proceeding).
 
 ```python
-def copy_weights(myresnet: ResNet34, pretrained_resnet: torchvision.models.resnet.ResNet) -> ResNet34:
+def copy_weights(my_resnet: ResNet34, pretrained_resnet: torchvision.models.resnet.ResNet) -> ResNet34:
     '''Copy over the weights of `pretrained_resnet` to your resnet.'''
     
-    mydict = myresnet.state_dict()
+    mydict = my_resnet.state_dict()
     pretraineddict = pretrained_resnet.state_dict()
     
     # Check the number of params/buffers is correct
@@ -750,11 +853,13 @@ def copy_weights(myresnet: ResNet34, pretrained_resnet: torchvision.models.resne
     for (mykey, myvalue), (pretrainedkey, pretrainedvalue) in zip(mydict.items(), pretraineddict.items()):
         state_dict_to_load[mykey] = pretrainedvalue
     
-    myresnet.load_state_dict(state_dict_to_load)
+    my_resnet.load_state_dict(state_dict_to_load)
     
-    return myresnet
+    return my_resnet
 
-myresnet = copy_weights(myresnet, pretrained_resnet)
+
+if MAIN:
+    my_resnet = copy_weights(my_resnet, pretrained_resnet)
 ```
 
 ## Running Your Model
@@ -762,22 +867,23 @@ myresnet = copy_weights(myresnet, pretrained_resnet)
 We've provided you with some images for your model to classify:
 
 ```python
-IMAGE_FILENAMES = [
-    "chimpanzee.jpg",
-    "golden_retriever.jpg",
-    "platypus.jpg",
-    "frogs.jpg",
-    "fireworks.jpg",
-    "astronaut.jpg",
-    "iguana.jpg",
-    "volcano.jpg",
-    "goofy.jpg",
-    "dragonfly.jpg",
-]
+if MAIN:
+    IMAGE_FILENAMES = [
+        "chimpanzee.jpg",
+        "golden_retriever.jpg",
+        "platypus.jpg",
+        "frogs.jpg",
+        "fireworks.jpg",
+        "astronaut.jpg",
+        "iguana.jpg",
+        "volcano.jpg",
+        "goofy.jpg",
+        "dragonfly.jpg",
+    ]
 
-IMAGE_FOLDER = Path("./resnet_inputs")
+    IMAGE_FOLDER = "./resnet_inputs"
 
-images = [Image.open(IMAGE_FOLDER / filename) for filename in IMAGE_FILENAMES]
+    images = [Image.open(IMAGE_FOLDER / filename) for filename in IMAGE_FILENAMES]
 ```
 
 Our `images` are of type `PIL.Image.Image`, so we can just call them in a cell to display them.
@@ -805,8 +911,11 @@ def prepare_data(images: list[Image.Image]) -> t.Tensor:
     '''
     pass
 
-prepared_images = prepare_data(images)
-```""")
+
+if MAIN:
+    prepared_images = prepare_data(images)
+```
+""")
 
     with st.expander(r"""Help - I'm not sure how to stack the images."""):
         st.markdown(r"""Use `t.stack`. The argument of `t.stack` should be a list of preprocessed images.""")
@@ -838,7 +947,7 @@ If it doesn't, congratulations, you get to practice model debugging! Don't be af
  
 def section_finetune():
     st.markdown(r"""
-# Finetuning ResNet
+# Finetuning ResNet (bonus)
 
 For your final exercise of the day, we're purposefully giving you much less guidance than we have for previous days. 
 
@@ -856,7 +965,7 @@ Good luck!
  
 func_list = [section_home, section_cnn, section_resnet, section_finetune]
 
-page_list = ["🏠 Home", "1️⃣ Building & Training a CNN", "2️⃣ Assembling ResNet", "3️⃣ Finetuning ResNet"]
+page_list = ["🏠 Home", "1️⃣ Building & Training a CNN", "2️⃣ Assembling ResNet", "3️⃣ Finetuning ResNet (bonus)"]
 page_dict = {name: idx for idx, name in enumerate(page_list)}
 
 def page():

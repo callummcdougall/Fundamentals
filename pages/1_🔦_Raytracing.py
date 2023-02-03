@@ -108,7 +108,7 @@ import ipywidgets as wg
 from torchtyping import TensorType as TT
 from IPython.display import display
 
-import part1_raytracing_test as tests
+import part1_raytracing_tests as tests
 
 MAIN = __name__ == "__main__"
 
@@ -418,10 +418,12 @@ Broadcasting sematics are a bit messy, and we'll go into it in more detail later
 """)
     with st.expander("More on broadcasting"):
         st.markdown(r"""
-The full rules for broacasting tensors `A` and `B` are:
+If you try to broadcast tensors `A` and `B`, then the following happens:
 
-* If the numbers of dimensions of `A`, `B` are different, then the smaller tensor is padded with dimensions of size one on the left.
-* Once the number of dimensions is the same, we compare the elements of `A.shape` and `B.shape` pairwise. If one of them is one, we copy the tensor over that dimension until it's the same size as the other one. If neither of them are one, and they're not equal, then broadcasting is not allowed.
+* The tensor with fewer dimensions is padded with dimensions of size one on the left.
+* Once the tensors have the same number of dimensions, they are checked for compatibility.
+    * Two dimensions are compatible if they are equal, or if one of them is one (in the latter case, we repeat the size-1 tensor along that dimension until it's the same size as the larger one).
+    * If they are not compatible, then broadcasting is not allowed.
 
 Here are a few examples:
 

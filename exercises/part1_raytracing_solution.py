@@ -11,7 +11,7 @@ import plotly.graph_objs as go
 from IPython.display import display
 from torchtyping import TensorType as TT
 
-import part1_raytracing_test as tests
+import part1_raytracing_tests as tests
 
 MAIN = __name__ == "__main__"
 

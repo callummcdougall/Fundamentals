@@ -55,7 +55,6 @@ def section_wandb():
 ## Table of Contents
 
 <ul class="contents">
-    <li><a class="contents-el" href="#imports">Imports</a></li>
     <li><a class="contents-el" href="#cifar10"><code>CIFAR10</code></a></li>
     <li><a class="contents-el" href="#what-is-weights-and-biases">What is Weights and Biases?</a></li>
     <li><a class="contents-el" href="#logging-runs-with-wandb">Logging runs with <code>wandb</code></a></li>
@@ -71,30 +70,6 @@ Today, we'll look at methods for choosing hyperparameters effectively. You'll le
 The exercises themselves will be based on your ResNet implementations from yesterday, although the principles should carry over to other models you'll build in this course (such as transformers next week).
 
 Note, this page only contains one exercise, and it's relatively short. You're encouraged to spend some time playing around with Weights and Biases, but you should also spend some more time finetuning your ResNet from yesterday (you might want to finetune ResNet during the morning, and look at today's material in the afternoon - you can discuss this with your partner). You should also spend some time reviewing the last three days of material, to make sure there are no large gaps in your understanding.
-
-## Imports
-
-You may have to install `wandb`.
-
-```python
-import torch as t
-from torch import nn
-from torchvision import datasets, transforms
-from torch.utils.data import DataLoader
-from fancy_einsum import einsum
-from typing import Union, Optional, Callable
-import numpy as np
-from einops import rearrange
-from tqdm.notebook import tqdm_notebook
-import plotly.express as px
-import plotly.graph_objs as go
-from plotly.subplots import make_subplots
-import time
-import wandb
-import utils
-
-device = "cuda" if t.cuda.is_available() else "cpu"
-```
 
 ## CIFAR10
 
@@ -633,12 +608,11 @@ def section_optim():
         <li><a class="contents-el" href="#momentum">Momentum</a></li>
     </ul></li>
     <li><a class="contents-el" href="#visualising-optimization-with-rosenbrocks-banana">Visualising Optimization With Rosenbrock's Banana</a></li>
-    <li><a class="contents-el" href="#optimize-the-banana">Optimize The Banana</a></li>
     <li><a class="contents-el" href="#build-your-own-optimizers">Build Your Own Optimizers</a></li>
     <li><ul class="contents">
-        <li><a class="contents-el" href="#sgd">SGD</a></li>
-        <li><a class="contents-el" href="#rmsprop">RMSprop</a></li>
-        <li><a class="contents-el" href="#adam">Adam</a></li>
+        <li><a class="contents-el" href="#exercise-implement-sgd">SGD</a></li>
+        <li><a class="contents-el" href="#exercise-implement-rmsprop">RMSprop</a></li>
+        <li><a class="contents-el" href="#exercise-implement-adam">Adam</a></li>
     </ul></li>
     <li><a class="contents-el" href="#plotting-multiple-optimisers">Plotting multiple optimisers</a></li>
     <li><a class="contents-el" href="#bonus-parameter-groups">Bonus - parameter groups</a></li>
@@ -657,9 +631,25 @@ def section_optim():
 ```python
 import torch as t
 from torch import nn, optim
+from torchvision import datasets, transforms
+from torch.utils.data import DataLoader
+from fancy_einsum import einsum
+from typing import Union, Optional, Callable
 import numpy as np
+from einops import rearrange
+from tqdm.notebook import tqdm_notebook
+import plotly.express as px
+import plotly.graph_objs as go
+from plotly.subplots import make_subplots
+import time
+import wandb
 
-import utils
+import part4_training_utils as utils
+import part4_training_tests as tests
+
+device = t.device("cuda" if t.cuda.is_available() else "cpu")
+```
+
 ```
 
 ## Reading
@@ -762,14 +752,15 @@ Your output should look like:
     st.plotly_chart(fig_dict["rosenbrock_1"].update_layout(height=600), use_container_width=True)
 
     with st.expander("Question - where is the minimum of this function?"):
-        st.markdown("""
+        st.markdown(r"""
 The first term is minimised when `x=a` and the second term when `y=x**2`. So we deduce that the minimum is at `(a, a**2)`. When `a=1`, this gives us the minimum `(1, 1)`.
 
 You can pass the extra argument `show_min=True` to all plotting functions, to indicate the minimum.
 """)
 
-    st.markdown("""
-## Optimize The Banana
+    with st.columns(1)[0]:
+        st.markdown(r"""
+#### Exercise - implement `opt_fn_with_sgd`
 
 Implement the `opt_fn` function using `torch.optim.SGD`. Starting from `(-1.5, 2.5)`, run your function and add the resulting trajectory of `(x, y)` pairs to your contour plot. Did it find the minimum? Play with the learning rate and momentum a bit and see how close you can get within 100 iterations.
 
@@ -788,16 +779,16 @@ def opt_fn_with_sgd(fn: Callable, xy: t.Tensor, lr=0.001, momentum=0.98, n_iters
 ```
 """)
 
-    with st.expander("Help - I'm not sure if my `opt_banana` is implemented properly."):
-        st.markdown("With a learning rate of `0.001` and momentum of `0.98`, my SGD was able to reach `[ 1.0234,  1.1983]` after 100 iterations.")
+        with st.expander("Help - I'm not sure if my `opt_banana` is implemented properly."):
+            st.markdown(r"With a learning rate of `0.001` and momentum of `0.98`, my SGD was able to reach `[ 1.0234,  1.1983]` after 100 iterations.")
 
-    with st.expander("Help - all my (x, y) points are the same."):
-        st.markdown("""This is probably because you've stored your `xy` values in a list, so they change each time you perform a gradient descent step. 
+        with st.expander("Help - all my (x, y) points are the same."):
+            st.markdown(r"""This is probably because you've stored your `xy` values in a list, so they change each time you perform a gradient descent step. 
 
 Instead, try creating a tensor of zeros to hold them, and fill in that tensor using `xys[i] = xy.detach()` at each step.""")
 
-    with st.expander("Help - I'm getting 'Can't call numpy() on Tensor that requires grad'."):
-        st.markdown("""
+        with st.expander("Help - I'm getting 'Can't call numpy() on Tensor that requires grad'."):
+            st.markdown("""
 This is a protective mechanism built into PyTorch. The idea is that once you convert your Tensor to NumPy, PyTorch can no longer track gradients, but you might not understand this and expect backprop to work on NumPy arrays.
 
 All you need to do to convince PyTorch you're a responsible adult is to call detach() on the tensor first, which returns a view that does not require grad and isn't part of the computation graph.
@@ -847,7 +838,7 @@ You MUST use in-place operations in your optimizer because we want the model to 
 
 Note, this observation specifically refers to the parameters. When you're updating non-parameter variables that you're tracking, you should be careful not to accidentally use an in-place operation where you shouldn't!)""")
 
-    st.markdown("""### More Tips
+    st.markdown(r"""### More Tips
 
 - The provided `params` might be a generator, in which case you can only iterate over it once before the generator is exhausted. **You should copy it into a `list` to be able to iterate over it repeatedly.**
 - Your step function shouldn't modify the gradients. Use the `with torch.inference_mode():` context for this. Fun fact: you can instead use `@torch.inference_mode()` (note the preceding `@`) as a method decorator to do the same thing.
@@ -859,7 +850,12 @@ Note, the configurations used during testing will start simple (e.g. all paramet
 
 You should also fill in the default PyTorch keyword arguments, where appropriate.
 
-### SGD
+""")
+    with st.columns(1)[0]:
+        st.markdown(r"""
+#### Exercise - implement SGD
+
+First, you should implement stochastic gradient descent. It should be like the [PyTorch version](https://pytorch.org/docs/stable/generated/torch.optim.SGD.html#torch.optim.SGD), but assume `nesterov=False`, `maximize=False`, and `dampening=0`. These simplifications mean that there are many variables in the pseudocode at that link which you can ignore.
 
 ```python
 class SGD:
@@ -869,7 +865,6 @@ class SGD:
         '''Implements SGD with momentum.
 
         Like the PyTorch version, but assume nesterov=False, maximize=False, and dampening=0
-            https://pytorch.org/docs/stable/generated/torch.optim.SGD.html#torch.optim.SGD
         '''
         pass
 
@@ -883,7 +878,9 @@ class SGD:
         # Should return something reasonable here, e.g. "SGD(lr=lr, ...)"
         pass
 
-utils.test_sgd(SGD)
+
+if MAIN:
+    tests.test_sgd(SGD)
 ```
 
 If you've having trouble, you can use the following process when implementing your optimisers:
@@ -897,8 +894,8 @@ If you've having trouble, you can use the following process when implementing yo
 You can click on the expander below to see what the first two steps look like for the case of SGD (try and have a go at each step before you look).
 """)
 
-    with st.expander("STEP 1"):
-        st.markdown(r"""
+        with st.expander("STEP 1"):
+            st.markdown(r"""
 In the SGD pseudocode, you'll first notice that we can remove the nesterov section, i.e. we always do $g_t \leftarrow \boldsymbol{b}_t$. Then, we can actually remove the variable $\boldsymbol{b_t}$ altogether (because we only needed it to track values while implementing nesterov). Lastly, we have `maximize=False` and `dampening=0`, which allows us to further simplify. So we get the simplified pseudocode:
 
 $
@@ -914,8 +911,8 @@ $
 Note - you might find it helpful to name your variables in the `__init__` step in line with their definitions in the pseudocode, e.g. `self.mu = momentum`. This will make it easier to implement the `step` function.
 """)
 
-    with st.expander("STEP 2"):
-        st.markdown(r"""
+        with st.expander("STEP 2"):
+            st.markdown(r"""
 In the formula from STEP 1, $\theta_t$ represents the parameters themselves, and $g_t$ represents variables which we need to keep track of in order to implement momentum. We need to track $g_t$ in our model, e.g. using a line like:
 
 ```python
@@ -927,9 +924,10 @@ We also need to track the variable $t$, because the behavour is different when $
 Now, you should be in a good position to attempt the third step: applying SGD in the `step` function, using this algorithm and these tracked variables.
 """)
 
-
-    st.markdown("""
-### RMSprop
+    st.markdown("")
+    with st.columns(1)[0]:
+        st.markdown(r"""
+#### Exercise - implement RMSprop
 
 Once you've implemented SGD, you should do RMSprop in a similar way. Although the pseudocode is more complicated and there are more variables you'll have to track, there is no big conceptual difference between the task for RMSprop and SGD.
 
@@ -964,11 +962,13 @@ class RMSprop:
     
 
 
-utils.test_rmsprop(RMSprop)
-```""")
-
-    st.markdown(r"""
-### Adam
+tests.test_rmsprop(RMSprop)
+```
+""")
+    st.markdown("")
+    with st.columns(1)[0]:
+        st.markdown(r"""
+### Exercise - implement Adam
 
 Finally, you'll do the same for Adam. This is a very popular optimizer in deep learning, which empirically often outperforms most others. It combines the heuristics of both momentum (via the $\beta_1$ parameter), and RMSprop's handling of noisy data by dividing by the $l_2$ norm of gradients (via the $\beta_2$ parameter).
 
@@ -998,9 +998,10 @@ class Adam:
     def __repr__(self) -> str:
         pass
 
-utils.test_adam(Adam)
+tests.test_adam(Adam)
 ```
-
+""")
+    st.markdown(r"""
 ## Plotting multiple optimisers
 
 Finally, we've provided some code which should allow you to plot more than one of your optimisers at once.
@@ -1036,11 +1037,15 @@ fig.show()
 """)
     st.plotly_chart(fig_dict["rosenbrock_3"].update_layout(height=600), use_container_width=True)
 
-    st.markdown("""
+    st.markdown(r"""
 You can try and play around with a few optimisers. Do Adam and RMSprop do well on this function? Why / why not? Can you find some other functions where they do better / worse, and plot those?
 
 ## Bonus - parameter groups
-
+""")
+    st.error(r"""
+*If you're interested in these exercises then you can go through them, if not then you can move on to the next section (weights and biases).*
+""")
+    st.markdown(r"""
 Rather than passing a single iterable of parameters into an optimizer, you have the option to pass a list of parameter groups, each one with different hyperparameters. As an example of how this might work:
 
 ```python
@@ -1098,7 +1103,7 @@ class SGD:
     def zero_grad(self) -> None:
         pass
 
-utils.test_sgd_param_groups(SGD)
+tests.test_sgd_param_groups(SGD)
 ```
 """)
 

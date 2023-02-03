@@ -18,7 +18,9 @@ def read_from_html(filename):
     return pio.from_json(json.dumps(plotly_json))
 
 def get_fig_dict():
-    return {str(i): read_from_html(f"fig{i}") for i in range(1, 16)}
+    fig_dict = {str(i): read_from_html(f"fig{i}") for i in range(1, 16)}
+    fig_dict = {(int(s) if s.isdigit() else s): fig for s, fig in fig_dict.items()}
+    return fig_dict
 
 if "fig_dict" not in st.session_state:
     fig_dict = get_fig_dict()
@@ -85,9 +87,11 @@ from einops import reduce, rearrange, repeat
 from typing import Union, Optional, Callable
 import torch as t
 import torchvision
-import utils
 
 arr = np.load("numbers.npy")
+
+import part2_cnns_utils as utils
+import part2_cnns_tests as tests
 ```
 
 `arr` is a 4D numpy array. The first axes corresponds to the number, and the next three axes are channels (i.e. RGB), height and width respectively. You have the function `utils.display_array_as_img` which takes in a numpy array and displays it as an image. There are two possible ways this function can be run:
@@ -103,7 +107,7 @@ display_array_as_img(arr[0])
 
 produces the following output:""")
 
-    st.plotly_chart(fig_dict["1"], use_container_width=False, config=dict(displayModeBar=False))
+    st.plotly_chart(fig_dict[1], use_container_width=False, config=dict(displayModeBar=False))
 
     st.markdown(r"""
 A series of images follow below, which have been created using `einops` functions performed on `arr`. You should work through these and try to produce each of the images yourself. This page also includes solutions, but you should only look at them after you've tried for at least five minutes.
@@ -113,49 +117,49 @@ A series of images follow below, which have been created using `einops` function
 
     with st.columns(1)[0]:
         st.markdown("### Exercise 1")
-        st.plotly_chart(fig_dict["2"], use_container_width=False, config=dict(displayModeBar=False))
+        st.plotly_chart(fig_dict[2], use_container_width=False, config=dict(displayModeBar=False))
         with st.expander("Solution"):
             st.code(r"""arr2 = rearrange(arr, "b c h w -> c h (b w)")""")
 
     with st.columns(1)[0]:
         st.markdown("### Exercise 2")
-        st.plotly_chart(fig_dict["3"], use_container_width=False, config=dict(displayModeBar=False))
+        st.plotly_chart(fig_dict[3], use_container_width=False, config=dict(displayModeBar=False))
         with st.expander("Solution"):
             st.code(r"""arr2 = repeat(arr[0], "c h w -> c (2 h) w")""")
 
     with st.columns(1)[0]:
         st.markdown("### Exercise 3")
-        st.plotly_chart(fig_dict["4"], use_container_width=False, config=dict(displayModeBar=False))
+        st.plotly_chart(fig_dict[4], use_container_width=False, config=dict(displayModeBar=False))
         with st.expander("Solution"):
             st.code(r"""arr2 = repeat(arr[0:2], "b c h w -> c (b h) (2 w)")""")
 
     with st.columns(1)[0]:
         st.markdown("### Exercise 4")
-        st.plotly_chart(fig_dict["5"], use_container_width=False, config=dict(displayModeBar=False))
+        st.plotly_chart(fig_dict[5], use_container_width=False, config=dict(displayModeBar=False))
         with st.expander("Solution"):
             st.code(r"""arr2 = repeat(arr[0], "c h w -> c (h 2) w")""")
 
     with st.columns(1)[0]:
         st.markdown("### Exercise 5")
-        st.plotly_chart(fig_dict["6"], use_container_width=False, config=dict(displayModeBar=False))
+        st.plotly_chart(fig_dict[6], use_container_width=False, config=dict(displayModeBar=False))
         with st.expander("Solution"):
             st.code(r"""arr2 = rearrange(arr[0], "c h w -> h (c w)")""")
 
     with st.columns(1)[0]:
         st.markdown("### Exercise 6")
-        st.plotly_chart(fig_dict["7"], use_container_width=False, config=dict(displayModeBar=False))
+        st.plotly_chart(fig_dict[7], use_container_width=False, config=dict(displayModeBar=False))
         with st.expander("Solution"):
             st.code(r"""arr2 = rearrange(arr, "(b1 b2) c h w -> c (b1 h) (b2 w)", b1=2)""")
 
     with st.columns(1)[0]:
         st.markdown("### Exercise 7")
-        st.plotly_chart(fig_dict["8"], use_container_width=False, config=dict(displayModeBar=False))
+        st.plotly_chart(fig_dict[8], use_container_width=False, config=dict(displayModeBar=False))
         with st.expander("Solution"):
             st.code(r"""arr2 = reduce(arr.astype(float), "b c h w -> h (b w)", "max").astype(int)""")
 
     with st.columns(1)[0]:
         st.markdown("### Exercise 8")
-        st.plotly_chart(fig_dict["9"], use_container_width=False, config=dict(displayModeBar=False))
+        st.plotly_chart(fig_dict[9], use_container_width=False, config=dict(displayModeBar=False))
         with st.expander("Hint"):
             st.markdown("NumPy complains when you take the mean over an integer array. You may need to convert into `float` then back to `int` at the end. Use the `astype` array method.")
         with st.expander("Solution"):
@@ -163,13 +167,13 @@ A series of images follow below, which have been created using `einops` function
 
     with st.columns(1)[0]:
         st.markdown("### Exercise 9")
-        st.plotly_chart(fig_dict["10"], use_container_width=False, config=dict(displayModeBar=False))
+        st.plotly_chart(fig_dict[10], use_container_width=False, config=dict(displayModeBar=False))
         with st.expander("Solution"):
             st.code(r"""arr2 = reduce(arr.astype(float), "b c h w -> h w", "min").astype(int)""")
 
     with st.columns(1)[0]:
         st.markdown("### Exercise 10")
-        st.plotly_chart(fig_dict["11"], use_container_width=False, config=dict(displayModeBar=False))
+        st.plotly_chart(fig_dict[11], use_container_width=False, config=dict(displayModeBar=False))
         with st.expander("Hint"):
             st.markdown("Try to split this into 2 parts. The first part should just involve creating a 3D array corresponding to the image of [0, 1] side by side.")
         with st.expander("Solution"):
@@ -179,13 +183,13 @@ A series of images follow below, which have been created using `einops` function
 
     with st.columns(1)[0]:
         st.markdown("### Exercise 11")
-        st.plotly_chart(fig_dict["12"], use_container_width=False, config=dict(displayModeBar=False))
+        st.plotly_chart(fig_dict[12], use_container_width=False, config=dict(displayModeBar=False))
         with st.expander("Solution"):
             st.code(r"""arr2 = rearrange(arr[1], "c h w -> c w h")""")
 
     with st.columns(1)[0]:
         st.markdown("### Exercise 12")
-        st.plotly_chart(fig_dict["13"], use_container_width=False, config=dict(displayModeBar=False))
+        st.plotly_chart(fig_dict[13], use_container_width=False, config=dict(displayModeBar=False))
         with st.expander("Solution"):
             st.code(r"""arr2 = rearrange(arr, "(b1 b2) c h w -> c (b1 w) (b2 h)", b1=2)""")
 
@@ -195,7 +199,7 @@ In this exercise, we use **max pooling**. This is a topic we'll dive deeper into
 
 You should find the `reduce` function useful here.
 """)
-        st.plotly_chart(fig_dict["14"], use_container_width=False, config=dict(displayModeBar=False))
+        st.plotly_chart(fig_dict[14], use_container_width=False, config=dict(displayModeBar=False))
         with st.expander("Solution"):
             st.code(r"""arr2 = reduce(arr, "(b1 b2) c (h h2) (w w2) -> c (b1 h) (b2 w)", "max", h2=2, w2=2, b1=2)""")
 
@@ -252,11 +256,12 @@ def einsum_outer(vec1, vec2):
     '''
     pass
 
-utils.test_einsum_trace(einsum_trace)
-utils.test_einsum_mv(einsum_mv)
-utils.test_einsum_mm(einsum_mm)
-utils.test_einsum_inner(einsum_inner)
-utils.test_einsum_outer(einsum_outer)
+if MAIN:
+tests.test_einsum_trace(einsum_trace)
+tests.test_einsum_mv(einsum_mv)
+tests.test_einsum_mm(einsum_mm)
+tests.test_einsum_inner(einsum_inner)
+tests.test_einsum_outer(einsum_outer)
 ```
 """)
 
@@ -383,7 +388,7 @@ def as_strided_trace(mat: t.Tensor) -> t.Tensor:
     '''
     pass
 
-utils.test_trace(as_strided_trace)
+tests.test_trace(as_strided_trace)
 ```
 """)
 
@@ -401,8 +406,8 @@ def as_strided_mv(mat: t.Tensor, vec: t.Tensor) -> t.Tensor:
     '''
     pass
 
-utils.test_mv(as_strided_mv)
-utils.test_mv2(as_strided_mv)
+tests.test_mv(as_strided_mv)
+tests.test_mv2(as_strided_mv)
 ```
 """)
 
@@ -430,8 +435,8 @@ def as_strided_mm(matA: t.Tensor, matB: t.Tensor) -> t.Tensor:
     '''
     pass
 
-utils.test_mm(as_strided_mm)
-utils.test_mm2(as_strided_mm)
+tests.test_mm(as_strided_mm)
+tests.test_mm2(as_strided_mm)
 ```
 """)
 
@@ -549,7 +554,7 @@ def conv1d_minimal(x: t.Tensor, weights: t.Tensor) -> t.Tensor:
     '''
     pass
     
-utils.test_conv1d_minimal(conv1d_minimal)
+tests.test_conv1d_minimal(conv1d_minimal)
 ```
 """)
     st.markdown(r"""
@@ -589,7 +594,7 @@ def conv2d_minimal(x: t.Tensor, weights: t.Tensor) -> t.Tensor:
     '''
     pass
     
-utils.test_conv2d_minimal(conv2d_minimal)
+tests.test_conv2d_minimal(conv2d_minimal)
 ```
 """)
     st.markdown(r"""
@@ -616,8 +621,8 @@ def pad1d(x: t.Tensor, left: int, right: int, pad_value: float) -> t.Tensor:
     pass
 
 
-utils.test_pad1d(pad1d)
-utils.test_pad1d_multi_channel(pad1d)
+tests.test_pad1d(pad1d)
+tests.test_pad1d_multi_channel(pad1d)
 ```
 
 ```python
@@ -631,8 +636,8 @@ def pad2d(x: t.Tensor, left: int, right: int, top: int, bottom: int, pad_value: 
     '''
     pass
 
-utils.test_pad2d(pad2d)
-utils.test_pad2d_multi_channel(pad2d)
+tests.test_pad2d(pad2d)
+tests.test_pad2d_multi_channel(pad2d)
 ```
 """)
     st.markdown(r"""
@@ -671,7 +676,7 @@ def conv1d(x, weights, stride: int = 1, padding: int = 0) -> t.Tensor:
     '''
     pass
 
-utils.test_conv1d(conv1d)
+tests.test_conv1d(conv1d)
 ```
 """)
 
@@ -715,7 +720,7 @@ def conv2d(x, weights, stride: IntOrPair = 1, padding: IntOrPair = 0) -> t.Tenso
     '''
     pass
     
-utils.test_conv2d(conv2d)
+tests.test_conv2d(conv2d)
 ```
 """)
     st.markdown(r"""
@@ -753,7 +758,7 @@ def maxpool2d(x: t.Tensor, kernel_size: IntOrPair, stride: Optional[IntOrPair] =
     '''
     pass
 
-utils.test_maxpool2d(maxpool2d)
+tests.test_maxpool2d(maxpool2d)
 ```""")
 
         with st.expander("Help - I'm getting a small number of mismatched elements each time (e.g. between 0 and 5%)."):
@@ -859,7 +864,7 @@ class MaxPool2d(nn.Module):
         '''Add additional information to the string representation of this class.'''
         pass
 
-utils.test_maxpool2d_module(MaxPool2d)
+tests.test_maxpool2d_module(MaxPool2d)
 m = MaxPool2d(kernel_size=3, stride=2, padding=1)
 print(f"Manually verify that this is an informative repr: {m}")
 ```
@@ -908,7 +913,7 @@ class ReLU(nn.Module):
     def forward(self, x: t.Tensor) -> t.Tensor:
         pass
 
-utils.test_relu(ReLU)
+tests.test_relu(ReLU)
 ```
 
 Now implement `Flatten`:
@@ -926,7 +931,7 @@ class Flatten(nn.Module):
     def extra_repr(self) -> str:
         pass
 
-utils.test_flatten(Flatten)
+tests.test_flatten(Flatten)
 ```
 """)
 
@@ -990,9 +995,9 @@ class Linear(nn.Module):
     def extra_repr(self) -> str:
         pass
     
-utils.test_linear_forward(Linear)
-utils.test_linear_parameters(Linear)
-utils.test_linear_no_bias(Linear)
+tests.test_linear_forward(Linear)
+tests.test_linear_parameters(Linear)
+tests.test_linear_no_bias(Linear)
 ```""")
 
         with st.expander(r"""Help - when I print my Linear module, it also prints a large tensor."""):
@@ -1026,7 +1031,7 @@ class Conv2d(nn.Module):
     def extra_repr(self) -> str:
         pass
 
-utils.test_conv2d_module(Conv2d)
+tests.test_conv2d_module(Conv2d)
 ```
 """)
         with st.expander(r"""Help - I don't know what to use as number of inputs, when doing Xavier initialisation."""):
