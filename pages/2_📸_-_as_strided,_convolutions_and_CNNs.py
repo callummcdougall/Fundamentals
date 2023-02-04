@@ -1,8 +1,9 @@
 import os
-if not os.path.exists("./images"):
-    os.chdir("./ch0")
+if not os.path.exists("images"):
+    os.chdir("../")
 from st_dependencies import *
 styling()
+import streamlit as st
 
 import plotly.io as pio
 import re

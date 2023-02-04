@@ -1,6 +1,6 @@
 import os
-# if not os.path.exists("./images"):
-#     os.chdir("./ch0")
+if not os.path.exists("images"):
+    os.chdir("../")
 from st_dependencies import *
 styling()
 
@@ -70,6 +70,9 @@ def section_1():
    <li><a class="contents-el" href="#mesh-rendering">Mesh Rendering</a></li>
    <li><a class="contents-el" href="#bonus-content">Bonus Content</a></li>
 """, unsafe_allow_html=True)
+    st.markdown(r"""
+Links to Colab: [**exercises**](https://colab.research.google.com/drive/1tp-vd591FarVyn7pA2V9oYDqYiWmjEjF?usp=share_link), [**solutions**](https://colab.research.google.com/drive/19QroufIT25oZ5yG7JGWL5Jp9IPcsq0d4?usp=sharing).
+""")
     st_image("raytracing.png", 350)
     st.markdown(r"""
 # Ray Tracing
