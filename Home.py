@@ -109,7 +109,7 @@ This GitHub repo contains the code for hosting these pages, as well as the files
     * We strongly recommend using `conda` for this. You can install `conda` [here](https://conda.io/projects/conda/en/latest/user-guide/install/index.html), and find basic instructions [here](https://conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html).
 * Install requirements.
     * First, install PyTorch using the following command: `conda install pytorch=1.11.0 torchdata torchvision -c pytorch -y`.
-    * Then install the rest of the requirements by navigating to the directory and running `pip install requirements.txt`.
+    * Then install the rest of the requirements by navigating to the directory and running `pip install -r requirements.txt`.
 * Navigate to the `./exercises` directory
 * Create a file called e.g. `part1_answers.py` (or `part1_answers.ipynb` if you prefer using notebooks)
 * Go through the Streamlit page, and copy over / fill in then run the appropriate code as you go through the exercises.
