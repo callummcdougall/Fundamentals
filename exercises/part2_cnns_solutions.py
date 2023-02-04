@@ -4,7 +4,13 @@ from fancy_einsum import einsum
 from typing import Union, Optional, Tuple
 import numpy as np
 import torch as t
+from torch.nn import functional as F
 from collections import namedtuple
+from torchvision import datasets, transforms
+from torch.utils.data import DataLoader
+from IPython.display import display
+import plotly.express as px
+from PIL import Image
 
 import part2_cnns_utils as utils
 import part2_cnns_tests as tests
@@ -560,5 +566,98 @@ if MAIN:
     tests.test_linear_parameters(Linear)
     tests.test_linear_no_bias(Linear)
     tests.test_conv2d_module(Conv2d)
+
+# %%
+
+class SimpleCNN(nn.Module):
+    def __init__(self):
+        super().__init__()
+
+        self.conv = Conv2d(in_channels=1, out_channels=32, kernel_size=3, stride=1, padding=1)
+        self.maxpool = MaxPool2d(kernel_size=2, stride=2, padding=0)
+        self.relu = ReLU()
+        self.flatten = Flatten()
+        self.fc = Linear(in_features=32*14*14, out_features=10)
+
+    def forward(self, x: t.Tensor) -> t.Tensor:
+        return self.fc(self.flatten(self.relu(self.maxpool(self.conv(x)))))
+
+if MAIN:
+    model = SimpleCNN()
+    print(model)
+
+# %%
+
+if MAIN:
+    mnist_transform = transforms.Compose([
+        transforms.ToTensor(),
+        transforms.Normalize((0.1307,), (0.3081,))
+    ])
+
+    mnist_trainset = datasets.MNIST(root="./data", train=True, download=False)
+
+    img, label = mnist_trainset[1]
+
+    print("Digit: ", label, "\n")
+    display(img.resize((200, 200), Image.Resampling.NEAREST))
+
+# %%
+def write_to_html(fig, filename):
+    with open(f"{filename}.html", "w") as f:
+        f.write(fig.to_html(full_html=False, include_plotlyjs='cdn'))
+if MAIN:
+    img_tensor = mnist_transform(img).unsqueeze(0)
+
+    probs = model(img_tensor).squeeze().softmax(-1).detach()
+
+    fig = px.bar(
+        y=probs, x=range(1, 11), height=400, width=600, template="ggplot2",
+        title="Classification probabilities", labels={"x": "Digit", "y": "Probability"}, text_auto='.2f'
+    ).update_layout(
+        showlegend=False, xaxis_tickmode="linear"
+    ).show()
+    
+
+# %%
+
+if MAIN:
+    BATCH_SIZE = 64
+    NUM_SAMPLES = 2000
+    NUM_BATCHES = NUM_SAMPLES // BATCH_SIZE
+
+    mnist_trainset.transform = mnist_transform
+    mnist_trainloader = DataLoader(mnist_trainset, batch_size=BATCH_SIZE, shuffle=True)
+
+    optimizer = t.optim.Adam(model.parameters())
+    loss_list = []
+
+    for i, (imgs, labels) in zip(range(NUM_BATCHES), mnist_trainloader):
+        optimizer.zero_grad()
+        probs = model(imgs)
+        loss = F.cross_entropy(probs, labels)
+        loss.backward()
+        optimizer.step()
+        loss_list.append(loss.item())
+        print(f"Batches seen = {i+1:02}/{NUM_BATCHES}, Loss = {loss:.3f}")
+
+    fig = px.line(
+        loss_list, height=400, width=600, labels={"value": "Cross entropy loss", "index": "Num batches"}, title="MNIST training curve"
+    ).update_layout(
+        showlegend=False, yaxis_range=[0, max(loss_list)*1.1]
+    )#.show()
+    write_to_html(fig, "loss_curve")
+
+# %%
+
+if MAIN:
+    probs = model(img_tensor).squeeze().softmax(-1).detach()
+
+    fig = px.bar(
+        y=probs, x=range(1, 11), height=400, width=600, template="ggplot2",
+        title="Classification probabilities", labels={"x": "Digit", "y": "Probability"},
+    ).update_layout(
+        showlegend=False, xaxis_tickmode="linear"
+    ) #.show()
+    write_to_html(fig, "mnist_probs_after_training")
 
 # %%

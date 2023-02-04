@@ -27,12 +27,6 @@ fig_dict = st.session_state["fig_dict"]
 
 # %%
 
-# make_rays_1d.png
-# raytracing.png
-
-def section_home():
-    pass
-
 def section_1():
     st.sidebar.markdown("""
 ## Table of Contents

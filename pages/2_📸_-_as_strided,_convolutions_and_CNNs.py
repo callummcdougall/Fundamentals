@@ -13,15 +13,33 @@ def read_from_html(filename):
     filename = f"images/{filename}.html"
     with open(filename) as f:
         html = f.read()
-    call_arg_str = re.findall(r'Plotly\.newPlot\((.*)\)', html)[0]
-    call_args = json.loads(f'[{call_arg_str}]')
-    plotly_json = {'data': call_args[1], 'layout': call_args[2]}    
-    return pio.from_json(json.dumps(plotly_json))
+    try:
+        call_arg_str = re.findall(r'Plotly\.newPlot\((.*)\)', html)[0]
+        call_args = json.loads(f'[{call_arg_str}]')
+        try:
+            plotly_json = {'data': call_args[1], 'layout': call_args[2]}
+            fig = pio.from_json(json.dumps(plotly_json))
+        except:
+            del call_args[2]["template"]["data"]["scatter"][0]["fillpattern"]
+            plotly_json = {'data': call_args[1], 'layout': call_args[2]}
+            fig = pio.from_json(json.dumps(plotly_json))
+    except:
+        call_arg_str = re.findall(r'Plotly\.newPlot\((.*)\)', html)[0]
+        call_arg_str = re.split(r'"responsive": true', call_arg_str)[0].rstrip("{, ")
+        call_args = json.loads(f'[{call_arg_str}]')
+        del call_args[2]["template"]["data"]["scatter"][0]["fillpattern"]
+        frame_arg_str = re.findall(r'Plotly\.addFrames\((.*)\)', html)[0].split(", ")[1]
+        frame_args = json.loads(frame_arg_str)
+        plotly_json = {'data': call_args[1], 'layout': call_args[2], 'frames': frame_args}
+        fig = pio.from_json(json.dumps(plotly_json))
+
+    return fig
 
 def get_fig_dict():
     fig_dict = {str(i): read_from_html(f"fig{i}") for i in range(1, 16)}
     fig_dict = {(int(s) if s.isdigit() else s): fig for s, fig in fig_dict.items()}
-    return fig_dict
+    fig_dict_2 = {i: read_from_html(i) for i in ["loss_curve", "mnist_probs_after_training", "mnist_probs_before_training"]}
+    return {**fig_dict, **fig_dict_2}
 
 if "fig_dict" not in st.session_state:
     fig_dict = get_fig_dict()
@@ -71,6 +89,9 @@ def section1():
 """, unsafe_allow_html=True)
 
     st.markdown(r"""
+Links to Colab: [**exercises**](https://colab.research.google.com/drive/1hQE1inYldFI_mmpCiLbIW8yI2C-PxBev?usp=sharing), [**solutions**](https://colab.research.google.com/drive/1VZk9ba3j7HJP9ChntblOoEAwxZukCgHn?usp=sharing).
+""")
+    st.markdown(r"""
 # Einops and Einsum
 
 ## Reading
@@ -84,14 +105,19 @@ def section1():
 First, run this cell to import the libraries and define the objects you'll need:
 
 ```python
-import numpy as np
 from fancy_einsum import einsum
-from einops import reduce, rearrange, repeat
-from typing import Union, Optional, Callable
+from typing import Union, Optional, Tuple
+import numpy as np
 import torch as t
-import torchvision
+from torch.nn import functional as F
+from collections import namedtuple
+from torchvision import datasets, transforms
+from torch.utils.data import DataLoader
+from IPython.display import display
+import plotly.express as px
+from PIL import Image
 
-import part2_cnns_utils as utils
+from part2_cnns_utils import display_array_as_img
 import part2_cnns_tests as tests
 
 MAIN = __name__ == "__main__"
@@ -817,6 +843,7 @@ A typical convolution operation is illustrated in the sketch below. Some notes o
 Below, you should implement `conv1d_minimal`. This is a function which works just like `conv1d`, but takes the default stride and padding values (these will be added back in later). You are allowed to use `as_strided` and `einsum`.
 
 This is intended to be pretty challenging, so we've provided several hints which you should work through in sequence if you get stuck.
+
 ```python
 def conv1d_minimal(x: t.Tensor, weights: t.Tensor) -> t.Tensor:
     '''Like torch's conv1d using bias=False and all other keyword arguments left at their default values.
@@ -835,17 +862,22 @@ if MAIN:
 """)
 
         with st.expander("Hint 1"):
-            st.markdown(r"""First, consider a simplified version where `batch` and `out_channels` are both 1. These are both pretty simple to add back in later, because the convolution operation is done identically along the batch dimension, and each slice of the kernel corresponding to one of the `out_channels` is convolved with `x` in exactly the same way.
+            st.markdown(r"""
+First, consider a simplified version where `batch` and `out_channels` are both 1. These are both pretty simple to add back in later, because the convolution operation is done identically along the batch dimension, and each slice of the kernel corresponding to one of the `out_channels` is convolved with `x` in exactly the same way.
         
-So we have `x.shape = (in_channels, width)`, and `weights.shape = (in_channels, kernel_width)`, and we want to get output of shape `(output_width,)`.""")
+So we have `x.shape = (in_channels, width)`, and `weights.shape = (in_channels, kernel_width)`, and we want to get output of shape `(output_width,)`.
+""")
 
         with st.expander("Hint 2"):
-            st.markdown(r"""We want to get a strided version of `x`, which we can then multiply with `weights` (using `einops`) to get something of the required shape.
+            st.markdown(r"""
+We want to get a strided version of `x`, which we can then multiply with `weights` (using `einops`) to get something of the required shape.
         
-The shape of `x_strided` should be `(in_channels, output_width, kernel_width)`. Try and think about what each of the strides should be.""")
+The shape of `x_strided` should be `(in_channels, output_width, kernel_width)`. Try and think about what each of the strides should be.
+""")
 
         with st.expander("Hint 3"):
-            st.markdown(r"""The strides for the first two dimensions of `x_strided` should be the same as `x.stride()`. For the stride corresponding to `kernel_width`, every time we move the kernel one step along inside `x` we also want to move one step inside `x`, so this stride should be `x.stride()[1]`.
+            st.markdown(r"""
+The strides for the first two dimensions of `x_strided` should be the same as `x.stride()`. For the stride corresponding to `kernel_width`, every time we move the kernel one step along inside `x` we also want to move one step inside `x`, so this stride should be `x.stride()[1]`.
         
 So we have:
 
@@ -854,7 +886,40 @@ xsB, xsI, xsWi = x.stride()
 x_new_stride = (xsB, xsI, xsWi, xsWi)
 ```
 
-Now try and turn this into a full function. Return to Hint1 if you're confused.""")
+Now try and turn this into a full function. Return to Hint1 if you're confused.
+""")
+
+        with st.expander("Solution"):
+            st.markdown(r"""
+```python
+def conv1d_minimal(x: t.Tensor, weights: t.Tensor) -> t.Tensor:
+    '''Like torch's conv1d using bias=False and all other keyword arguments left at their default values.
+
+    x: shape (batch, in_channels, width)
+    weights: shape (out_channels, in_channels, kernel_width)
+
+    Returns: shape (batch, out_channels, output_width)
+    '''
+    
+    batch, in_channels, width = x.shape
+    out_channels, in_channels_2, kernel_width = weights.shape
+    assert in_channels == in_channels_2, "in_channels for x and weights don't match up"
+    output_width = width - kernel_width + 1
+    
+    xsB, xsI, xsWi = x.stride()
+    wsO, wsI, wsW = weights.stride()
+    
+    x_new_shape = (batch, in_channels, output_width, kernel_width)
+    x_new_stride = (xsB, xsI, xsWi, xsWi)
+    # Common error: xsWi is always 1, so if you put 1 here you won't spot your mistake until you try this with conv2d!
+    x_strided = x.as_strided(size=x_new_shape, stride=x_new_stride)
+    
+    return einsum(
+        "batch in_channels output_width kernel_width, out_channels in_channels kernel_width -> batch out_channels output_width", 
+        x_strided, weights
+    )
+```
+""")
 
     st.markdown(r"""
 ## conv2d minimal
@@ -889,12 +954,16 @@ if MAIN:
 """)
 
         with st.expander("Hint 1"):
-            st.markdown(r"""This is conceptually very similar to conv1d. You can start by copying your code from the conv1d function, but changing it whenever it refers to `width` (since you'll need to use `width` *and* `height`).""")
+            st.markdown(r"""
+This is conceptually very similar to conv1d. You can start by copying your code from the conv1d function, but changing it whenever it refers to `width` (since you'll need to use `width` *and* `height`).
+""")
 
         with st.expander("Hint 2"):
-            st.markdown(r"""The shape of `x_strided` should be `(batch, in_channels, output_height, output_width, kernel_height, kernel_width)`. 
+            st.markdown(r"""
+The shape of `x_strided` should be `(batch, in_channels, output_height, output_width, kernel_height, kernel_width)`. 
         
-Just like last time, some of these strides should just correspond to their equivalents in `x.stride()`, and you can work out the others by thinking about how the kernel is moved around inside `x`.""")
+Just like last time, some of these strides should just correspond to their equivalents in `x.stride()`, and you can work out the others by thinking about how the kernel is moved around inside `x`.
+""")
 
         with st.expander("Solution"):
             st.markdown(r"""
@@ -993,11 +1062,11 @@ def pad1d(x: t.Tensor, left: int, right: int, pad_value: float) -> t.Tensor:
     output[..., left : left + W] = x
     # Note - you can't use `left:-right`, because `right` could be zero.
     return output
-    
-
+```
 """)
         with st.expander("Solution (pad2d)"):
             st.markdown(r"""
+```python
 def pad2d(x: t.Tensor, left: int, right: int, top: int, bottom: int, pad_value: float) -> t.Tensor:
     '''Return a new tensor with padding applied to the edges.
 
@@ -1026,7 +1095,8 @@ $$
 
 Verify for yourself that the forumla above simplifies to the formula we used earlier when padding is 0 and stride is 1.
 
-Docs for pytorch's `conv1d` can be found [here](https://pytorch.org/docs/stable/generated/torch.nn.Conv1d.html).""")
+Docs for pytorch's `conv1d` can be found [here](https://pytorch.org/docs/stable/generated/torch.nn.Conv1d.html).
+""")
     with st.columns(1)[0]:
         st.markdown(r"""
 #### Exercise - implement `conv1d`
@@ -1048,11 +1118,13 @@ if MAIN:
 ```
 """)
         with st.expander("Hint"):
-            st.markdown(r"""Each step of the kernel inside the input tensor, you're moving by `stride` elements rather than just 1 element.
+            st.markdown(r"""
+Each step of the kernel inside the input tensor, you're moving by `stride` elements rather than just 1 element.
         
 So when creating `x_strided`, you should change the `stride` argument at the positions corresponding to the movement of the kernel inside `x`, so that you're jumping over `stride` elements rather than 1.
 
-You will also need a new `output_width` (use the formula in the documentation).""")
+You will also need a new `output_width` (use the formula in the documentation).
+""")
         with st.expander("Solution"):
             st.markdown(r"""
 ```python
@@ -1094,7 +1166,7 @@ def conv1d(x: t.Tensor, weights: t.Tensor, stride: int = 1, padding: int = 0) ->
 A recurring pattern in these 2d functions is allowing the user to specify either an int or a pair of ints for an argument: examples are stride and padding. We've provided some type aliases and a helper function to simplify working with these.
 
 ```python
-IntOrPair = Union[int, tuple[int, int]]
+IntOrPair = Union[int, Tuple[int, int]]
 Pair = tuple[int, int]
 
 def force_pair(v: IntOrPair) -> Pair:
@@ -1180,8 +1252,8 @@ The way multiple channels work is also different. A convolution has some number 
         st.markdown(r"""
 #### Exercise - implement `maxpool2d`
 
-Implement `maxpool2d` using `torch.as_strided` and `torch.amax` (= max over axes) together. Your version should behave the same as the PyTorch version, but only the indicated arguments need to be supported.""")
-
+Implement `maxpool2d` using `torch.as_strided` and `torch.amax` (= max over axes) together. Your version should behave the same as the PyTorch version, but only the indicated arguments need to be supported.
+""")
 
         st.markdown(r"""
 ```python
@@ -1196,19 +1268,25 @@ def maxpool2d(x: t.Tensor, kernel_size: IntOrPair, stride: Optional[IntOrPair] =
     '''
     pass
 
-tests.test_maxpool2d(maxpool2d)
-```""")
+
+if MAIN:
+    tests.test_maxpool2d(maxpool2d)
+```
+""")
         with st.expander("Hint"):
-            st.markdown(r"""Conceptually, this is similar to `conv2d`. 
+            st.markdown(r"""
+Conceptually, this is similar to `conv2d`. 
     
 In `conv2d`, you had to use `as_strided` to turn the 4D tensor `x` into a 6D tensor `x_strided` (adding dimensions over which you would take the convolution), then multiply this tensor by the kernel and sum over these two new dimensions.
 
 `maxpool2d` is the same, except that you're simply taking max over those dimensions rather than a dot product with the kernel. So you should find yourself able to reuse a lot of code from your `conv2d` function.""")
 
         with st.expander("Help - I'm getting a small number of mismatched elements each time (e.g. between 0 and 5%)."):
-            st.markdown(r"""This is likely because you used an incorrect `pad_value`. In the convolution function, we set `pad_value=0` so these values wouldn't have any effect in the linear transformation. What pad value would make our padded elements "invisible" when we take the maximum?
+            st.markdown(r"""
+This is likely because you used an incorrect `pad_value`. In the convolution function, we set `pad_value=0` so these values wouldn't have any effect in the linear transformation. What pad value would make our padded elements "invisible" when we take the maximum?
         
-Click on the expander below to reveal the answer.""")
+Click on the expander below to reveal the answer.
+""")
 
         with st.expander(r"""Click to reveal the answer to the question posed in the expander above this one."""):
             st.markdown("$$-\infty$$")
@@ -1266,6 +1344,7 @@ def section4():
     <li><a class="contents-el" href="#relu-and-flatten">ReLU and Flatten</a></li>
     <li><a class="contents-el" href="#linear">Linear</a></li>
     <li><a class="contents-el" href="#conv2d">Conv2d</a></li>
+    <li><a class="contents-el" href="#training-loop">Training loop</a></li>
 </ul>
 """, unsafe_allow_html=True)
 
@@ -1357,8 +1436,11 @@ if MAIN:
 ```
 """)
 
-        with st.expander(r"""Help - I'm really confused about what to do here!"""):
-            st.markdown(r"""Your `forward` method should just implement the `maxpool2d` function that you defined earlier in these exercises. In order to get the parameters for this function like `kernel_size` and `stride`, you'll need to initialise them in `__init__`. 
+        with st.expander(r"""
+Help - I'm really confused about what to do here!
+"""):
+            st.markdown(r"""
+Your `forward` method should just implement the `maxpool2d` function that you defined earlier in these exercises. In order to get the parameters for this function like `kernel_size` and `stride`, you'll need to initialise them in `__init__`. 
 
 Later modules will be a bit more complicated because you'll need to initialise weights, but `MaxPool2d` has no weights - it's just a wrapper for the `maxpool2d` function.
 
@@ -1402,12 +1484,15 @@ class MaxPool2d(nn.Module):
     st.markdown(r"""
 ## ReLU and Flatten
 
-Now, you should do the same for the functions `ReLU` and `Flatten`. Neither of these have learnable parameters, so they should both follow exactly the same pattern as `MaxPool2d` above. Make sure you look at the PyTorch documentation pages for [ReLU](https://pytorch.org/docs/stable/generated/torch.nn.ReLU.html) and [Flatten](https://pytorch.org/docs/stable/generated/torch.nn.Flatten.html) so that you're comfortable with what they do and why they're useful in neural networks.""")
+Now, you should do the same for the functions `ReLU` and `Flatten`. Neither of these have learnable parameters, so they should both follow exactly the same pattern as `MaxPool2d` above. Make sure you look at the PyTorch documentation pages for [ReLU](https://pytorch.org/docs/stable/generated/torch.nn.ReLU.html) and [Flatten](https://pytorch.org/docs/stable/generated/torch.nn.Flatten.html) so that you're comfortable with what they do and why they're useful in neural networks.
+""")
 
     with st.expander(r"""Question - in a CNN, should you have Flatten layers before or after convolutional layers?"""):
-        st.markdown(r"""Flatten is most often used to stack over all non-batched dimensions, which includes the height and width dimensions of an image. This will destroy spatial relationships, meaning you should do it **after** you've done all your convolutions.
+        st.markdown(r"""
+Flatten is most often used to stack over all non-batched dimensions, which includes the height and width dimensions of an image. This will destroy spatial relationships, meaning you should do it **after** you've done all your convolutions.
     
-`Flatten` is usually only used after convolutions, before applying fully connected linear layers. For an example of this, see the CNN and ResNet architectures in tomorrow's exercise which we'll be attempting to build.""")
+`Flatten` is usually only used after convolutions, before applying fully connected linear layers. For an example of this, see the CNN and ResNet architectures in tomorrow's exercise which we'll be attempting to build.
+""")
 
     with st.columns(1)[0]:
         st.markdown(r"""
@@ -1420,9 +1505,20 @@ class ReLU(nn.Module):
     def forward(self, x: t.Tensor) -> t.Tensor:
         pass
 
-tests.test_relu(ReLU)
-```
 
+if MAIN:
+    tests.test_relu(ReLU)
+```
+""")
+        with st.expander("Solution"):
+            st.markdown(r"""
+```python
+class ReLU(nn.Module):
+    def forward(self, x: t.Tensor) -> t.Tensor:
+        return t.maximum(x, t.tensor(0.0))
+```
+""")
+        st.markdown(r"""
 Now implement `Flatten`:
 
 ```python
@@ -1444,23 +1540,33 @@ if MAIN:
 ```
 """)
 
-        with st.expander(r"""Help - I'm not sure which function to use for Flatten."""):
-            st.markdown(r"""You could use `einops.rearrange`, but constructing the rearrangement pattern as a string is nontrivial. Using `torch.reshape` will be easier.""")
+        with st.expander(r"""
+Help - I'm not sure which function to use for Flatten.
+"""):
+            st.markdown(r"""
+You could use `einops.rearrange`, but constructing the rearrangement pattern as a string is nontrivial. Using `torch.reshape` will be easier.
+""")
 
-        with st.expander(r"""Help - I can't figure out what shape the output should be in Flatten."""):
+        with st.expander(r"""
+Help - I can't figure out what shape the output should be in Flatten.
+"""):
             st.markdown(r"""
 If `input.shape = (n0, n1, ..., nk)`, and the `Flatten` module has `start_dim=i, end_dim=j`, then the new shape should be `(n0, n1, ..., ni*...*nj, ..., nk)`. This is because we're **flattening** over these dimensions.
 
 Try first constructing this new shape object (you may find `functools.reduce` helpful for taking the product of a list), then using `torch.reshape` to get your output.
 """)
 
-        with st.expander(r"""Help - I can't see why my Flatten module is failing the tests."""):
+        with st.expander(r"""
+Help - I can't see why my Flatten module is failing the tests.
+"""):
             st.markdown(r"""
 The most common reason is failing to correctly handle indices. Make sure that:
 * You're indexing up to **and including** `end_dim`.
 * You're correctly managing the times when `end_dim` is negative (e.g. if `input` is an nD tensor, and `end_dim=-1`, this should be interpreted as `end_dim=n-1`).
 """)
-        with st.expander("Solution"):
+        with st.expander(r"""
+Solution
+"""):
             st.markdown(r"""
 ```python
 class Flatten(nn.Module):
@@ -1493,14 +1599,20 @@ class Flatten(nn.Module):
     st.markdown(r"""
 ## Linear
 
-Now implement your own `Linear` module. This applies a simple linear transformation, with a weight matrix and optional bias vector. The PyTorch documentation page is [here](https://pytorch.org/docs/stable/generated/torch.nn.Linear.html). Note that this is the first `Module` you'll implement that has learnable weights and biases.""")
+Now implement your own `Linear` module. This applies a simple linear transformation, with a weight matrix and optional bias vector. The PyTorch documentation page is [here](https://pytorch.org/docs/stable/generated/torch.nn.Linear.html). Note that this is the first `Module` you'll implement that has learnable weights and biases.
+""")
 
-    with st.expander(r"""Question - what type should these variables be?"""):
-        st.markdown(r"""They have to be `torch.Tensor` objects wrapped in `nn.Parameter` in order for `nn.Module` to recognize them. If you forget to do this, `module.parameters()` won't include your `Parameter`, which prevents an optimizer from being able to modify it during training. 
+    with st.expander(r"""
+Question - what type should these variables be?
+"""):
+        st.markdown(r"""
+They have to be `torch.Tensor` objects wrapped in `nn.Parameter` in order for `nn.Module` to recognize them. If you forget to do this, `module.parameters()` won't include your `Parameter`, which prevents an optimizer from being able to modify it during training. 
         
-Also, in tomorrow's exercises we'll be building a ResNet and loading in weights from a pretrained model, and this is hard to do if you haven't registered all your parameters!""")
+Also, in tomorrow's exercises we'll be building a ResNet and loading in weights from a pretrained model, and this is hard to do if you haven't registered all your parameters!
+""")
 
-    st.markdown(r"""For any layer, initialization is very important for the stability of training: with a bad initialization, your model will take much longer to converge or may completely fail to learn anything. The default PyTorch behavior isn't necessarily optimal and you can often improve performance by using something more custom, but we'll follow it for today because it's simple and works decently well.
+    st.markdown(r"""
+For any layer, initialization is very important for the stability of training: with a bad initialization, your model will take much longer to converge or may completely fail to learn anything. The default PyTorch behavior isn't necessarily optimal and you can often improve performance by using something more custom, but we'll follow it for today because it's simple and works decently well.
 
 Each float in the weight and bias tensors are drawn independently from the uniform distribution on the interval:
 
@@ -1510,7 +1622,8 @@ $$
 
 where $N_{in}$ is the number of inputs contributing to each output value. The rough intuition for this is that it keeps the variance of the activations at each layer constant, since each one is calculated by taking the sum over $N_{in}$ inputs multiplied by the weights (and standard deviation of the sum of independent random variables scales as the square root of number of variables).
 
-The name for this is **Xavier (uniform) initialisation**.""")
+The name for this is **Xavier (uniform) initialisation**.
+""")
     with st.columns(1)[0]:
         st.markdown(r"""
 #### Exercise - implement `nn.Linear`
@@ -1546,9 +1659,11 @@ if MAIN:
 """)
 
         with st.expander(r"""Help - when I print my Linear module, it also prints a large tensor."""):
-            st.markdown(r"""This is because you've (correctly) defined `self.bias` as either `torch.Tensor` or `None`, rather than set it to the boolean value of `bias` used in initialisation.
+            st.markdown(r"""
+This is because you've (correctly) defined `self.bias` as either `torch.Tensor` or `None`, rather than set it to the boolean value of `bias` used in initialisation.
         
-To fix this, you will need to change `extra_repr` so that it prints the boolean value of `bias` rather than the value of `self.bias`.""")
+To fix this, you will need to change `extra_repr` so that it prints the boolean value of `bias` rather than the value of `self.bias`.
+""")
 
         with st.expander("Solution"):
             st.markdown(r"""
@@ -1591,10 +1706,11 @@ class Linear(nn.Module):
 ```
 """)
 
-    st.markdown(r"""## Conv2d
+    st.markdown(r"""
+## Conv2d
 
 Finally, we'll implement a module version of our `conv2d` function. This should look very similar to our linear layer implementation above, with weights and an optional bias tensor. The `nn.Conv2d` documentation page can be found [here](https://pytorch.org/docs/stable/generated/torch.nn.Conv2d.html). You should implement this without any bias term.
-    """)
+""")
 
     with st.columns(1)[0]:
         st.markdown(r"""
@@ -1662,15 +1778,132 @@ class Conv2d(nn.Module):
 """)
 
     st.markdown(r"""
----
+## Training loop
 
-Congratulations for getting to the end of day 2! That was a lot of material we covered!""")
+Congratulations for getting to the end of day 2! That was a lot of material we covered!
+""")
 
     # st.button("Press me when you're finished! 🙂", on_click = st.balloons)
 
-    st.markdown(r"""We'll start day 3 by using all of our code from the last section to build a CNN, and construct a basic training loop for our neural network.
+    st.markdown(r"""
+As a taster for next session's material, below we've provided you with a training loop for a simple convolutional neural network which classifies MNIST images.
 
-We'll then proceed to a more advanced architecture: residual neural networks, to classify ImageNet images.
+First, we'll define a very simple convolutional neural network:
+
+```python
+class SimpleCNN(nn.Module):
+    def __init__(self):
+        super().__init__()
+
+        self.conv = Conv2d(in_channels=1, out_channels=32, kernel_size=3, stride=1, padding=1)
+        self.maxpool = MaxPool2d(kernel_size=2, stride=2, padding=0)
+        self.relu = ReLU()
+        self.flatten = Flatten()
+        self.fc = Linear(in_features=32*14*14, out_features=10)
+
+    def forward(self, x: t.Tensor) -> t.Tensor:
+        return self.fc(self.flatten(self.relu(self.maxpool(self.conv(x)))))
+
+if MAIN:
+    model = SimpleCNN()
+    print(model)
+```
+
+Now, let's load in and inspect our training data (which involves doing some basic transformations). Don't worry about understanding this in detail, we'll go over it all in more detail next session.
+
+```python
+if MAIN:
+    mnist_transform = transforms.Compose([
+        transforms.ToTensor(),
+        transforms.Normalize((0.1307,), (0.3081,))
+    ])
+
+    mnist_trainset = datasets.MNIST(root="./data", train=True, download=False)
+
+    img, label = mnist_trainset[1]
+
+    print("Digit: ", label, "\n")
+    display(img.resize((200, 200), Image.Resampling.NEAREST))
+```
+""")
+    st_image("img0.png", 150)
+    st.markdown(r"""
+How well does our untrained model do on this image? Let's find out:
+
+```python
+if MAIN:
+    img_tensor = mnist_transform(img).unsqueeze(0)
+
+    probs = model(img_tensor).squeeze().softmax(-1).detach()
+
+    px.bar(
+        y=probs, x=range(1, 11), height=400, width=600, template="ggplot2",
+        title="Classification probabilities", labels={"x": "Digit", "y": "Probability"}, text_auto='.2f'
+    ).update_layout(
+        showlegend=False, xaxis_tickmode="linear"
+    ).show()
+```
+""")
+    st.plotly_chart(fig_dict["mnist_probs_before_training"])
+    st.markdown(r"""
+Now, we'll run our training loop on ~2000 images from the training set.
+
+```python
+if MAIN:
+    BATCH_SIZE = 64
+    NUM_SAMPLES = 2000
+    NUM_BATCHES = NUM_SAMPLES // BATCH_SIZE
+
+    mnist_trainset.transform = mnist_transform
+    mnist_trainloader = DataLoader(mnist_trainset, batch_size=BATCH_SIZE, shuffle=True)
+
+    optimizer = t.optim.Adam(model.parameters())
+    loss_list = []
+
+    for i, (imgs, labels) in zip(range(NUM_BATCHES), mnist_trainloader):
+        optimizer.zero_grad()
+        probs = model(imgs)
+        loss = F.cross_entropy(probs, labels)
+        loss.backward()
+        optimizer.step()
+        loss_list.append(loss.item())
+        print(f"Batches seen = {i+1:02}/{NUM_BATCHES}, Loss = {loss:.3f}")
+```
+
+Let's see how our model improved over time:
+
+```python
+if MAIN:
+    px.line(
+        loss_list, height=400, width=600, labels={"value": "Loss", "index": "Num batches"}, title="MNIST training curve (cross entropy loss)"
+    ).update_layout(
+        showlegend=False, yaxis_range=[0, max(loss_list)*1.1]
+    ).show()
+```
+""")
+    st.plotly_chart(fig_dict["loss_curve"])
+    st.markdown(r"""
+and finally, we can reevaluate our model on the same image we used earlier:
+
+```python
+if MAIN:
+    probs = model(img_tensor).squeeze().softmax(-1).detach()
+    px.bar(
+        y=probs, x=range(1, 11), height=400, width=600, template="ggplot2",
+        title="Classification probabilities", labels={"x": "Digit", "y": "Probability"},
+    ).update_layout(
+        showlegend=False, xaxis_tickmode="linear"
+    ).show()
+
+```
+""")
+    st.plotly_chart(fig_dict["mnist_probs_after_training"])
+    st.markdown(r"""
+Yaay, we've successfully classified at least one digit! 🎉
+
+---
+
+In subsequent exercises, we'll proceed to a more advanced architecture: residual neural networks, to classify ImageNet images.
 """)
 
 

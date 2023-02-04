@@ -8,11 +8,14 @@ import torchvision
 from torchvision import datasets, transforms
 from torch.utils.data import DataLoader
 from tqdm import tqdm
-from typing import List
+from typing import List, Callable
 import PIL
 from PIL import Image
-from typing import Callable
 import plotly.express as px
+from tqdm import tqdm
+from torchvision import datasets, transforms
+from torch.utils.data import DataLoader
+from PIL import Image
 
 from part2_cnns_solutions import ReLU, Conv2d, MaxPool2d, Flatten, Linear
 
@@ -419,4 +422,3 @@ if MAIN:
     prepared_images = prepare_data(images)
 
 # %%
-

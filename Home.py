@@ -113,6 +113,7 @@ The simplest way to get these exercises up and running is to use Colab. This gua
 [Here](https://drive.google.com/drive/folders/1YnTChxQTJnJfFhqyHA44h9Nro79AaYpn?usp=sharing) is the link to the folder containing all the Colabs, and the data you'll need. You can find the individual Colabs below (not all the exercises have been converted into Colab form yet):
 
 * Raytracing: [**exercises**](https://colab.research.google.com/drive/1tp-vd591FarVyn7pA2V9oYDqYiWmjEjF?usp=share_link), [**solutions**](https://colab.research.google.com/drive/19QroufIT25oZ5yG7JGWL5Jp9IPcsq0d4?usp=sharing)
+* as_strided, convolutions and CNNs: [**exercises**](https://colab.research.google.com/drive/1hQE1inYldFI_mmpCiLbIW8yI2C-PxBev?usp=sharing), [**solutions**](https://colab.research.google.com/drive/1VZk9ba3j7HJP9ChntblOoEAwxZukCgHn?usp=sharing)
 
 You can make a copy of the **exercises** notebooks in your own drive, and fill in the code cells whenever indicated. The solutions will be available in dropdowns next to each of the code cells. You can also look at the **solutions** notebooks if you're just interested in the output (since they have all the correct code filled in, and all the output on display within the notebook).
 
