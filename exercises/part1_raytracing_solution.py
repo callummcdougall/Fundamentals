@@ -365,7 +365,7 @@ if MAIN:
 
     test_triangle = t.stack([A, B, C], dim=0)
     rays2d = make_rays_2d(num_pixels_y, num_pixels_z, y_limit, z_limit)
-    triangle_lines = t.stack([A, B, C, A], dim=0).reshape(-1, 2, 3)
+    triangle_lines = t.stack([A, B, B, C, C, A], dim=0).reshape(-1, 2, 3)
     render_lines_with_plotly(rays2d, triangle_lines)
     intersects = raytrace_triangle(rays2d, test_triangle)
     img = intersects.reshape(num_pixels_y, num_pixels_z)

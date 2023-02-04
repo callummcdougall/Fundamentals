@@ -122,92 +122,110 @@ A series of images follow below, which have been created using `einops` function
 """)
 
     with st.columns(1)[0]:
-        st.markdown("### Exercise 1")
+        st.markdown(r"""
+### Exercise 1
+
+Here, you should stack each of the images horizontally.
+""")
         st.plotly_chart(fig_dict[2], use_container_width=False, config=dict(displayModeBar=False))
         with st.expander("Solution"):
-            st.code(r"""arr2 = rearrange(arr, "b c h w -> c h (b w)")""")
+            st.code(r"""arr1 = rearrange(arr, "b c h w -> c h (b w)")""")
 
     with st.columns(1)[0]:
-        st.markdown("### Exercise 2")
+        st.markdown(r"""
+### Exercise 2
+""")
         st.plotly_chart(fig_dict[3], use_container_width=False, config=dict(displayModeBar=False))
         with st.expander("Solution"):
             st.code(r"""arr2 = repeat(arr[0], "c h w -> c (2 h) w")""")
 
     with st.columns(1)[0]:
-        st.markdown("### Exercise 3")
+        st.markdown(r"""
+### Exercise 3
+""")
         st.plotly_chart(fig_dict[4], use_container_width=False, config=dict(displayModeBar=False))
         with st.expander("Solution"):
-            st.code(r"""arr2 = repeat(arr[0:2], "b c h w -> c (b h) (2 w)")""")
+            st.code(r"""arr3 = repeat(arr[0:2], "b c h w -> c (b h) (2 w)")""")
 
     with st.columns(1)[0]:
-        st.markdown("### Exercise 4")
+        st.markdown(r"""
+### Exercise 4
+""")
         st.plotly_chart(fig_dict[5], use_container_width=False, config=dict(displayModeBar=False))
         with st.expander("Solution"):
-            st.code(r"""arr2 = repeat(arr[0], "c h w -> c (h 2) w")""")
+            st.code(r"""arr4 = repeat(arr[0], "c h w -> c (h 2) w")""")
 
     with st.columns(1)[0]:
-        st.markdown("### Exercise 5")
+        st.markdown(r"""
+### Exercise 5
+""")
         st.plotly_chart(fig_dict[6], use_container_width=False, config=dict(displayModeBar=False))
         with st.expander("Solution"):
-            st.code(r"""arr2 = rearrange(arr[0], "c h w -> h (c w)")""")
+            st.code(r"""arr5 = rearrange(arr[0], "c h w -> h (c w)")""")
 
     with st.columns(1)[0]:
-        st.markdown("### Exercise 6")
+        st.markdown(r"""
+### Exercise 6
+""")
         st.plotly_chart(fig_dict[7], use_container_width=False, config=dict(displayModeBar=False))
         with st.expander("Solution"):
-            st.code(r"""arr2 = rearrange(arr, "(b1 b2) c h w -> c (b1 h) (b2 w)", b1=2)""")
+            st.code(r"""arr6 = rearrange(arr, "(b1 b2) c h w -> c (b1 h) (b2 w)", b1=2)""")
 
     with st.columns(1)[0]:
-        st.markdown("### Exercise 7")
+        st.markdown(r"""
+### Exercise 7
+""")
         st.plotly_chart(fig_dict[8], use_container_width=False, config=dict(displayModeBar=False))
         with st.expander("Solution"):
-            st.code(r"""arr2 = reduce(arr.astype(float), "b c h w -> h (b w)", "max").astype(int)""")
+            st.code(r"""arr7 = reduce(arr.astype(float), "b c h w -> h (b w)", "max").astype(int)""")
 
     with st.columns(1)[0]:
-        st.markdown("### Exercise 8")
-        st.plotly_chart(fig_dict[9], use_container_width=False, config=dict(displayModeBar=False))
-        with st.expander("Hint"):
-            st.markdown("NumPy complains when you take the mean over an integer array. You may need to convert into `float` then back to `int` at the end. Use the `astype` array method.")
-        with st.expander("Solution"):
-            st.code(r"""arr2 = reduce(arr.astype(float), "b c h w -> h (b w)", "mean").astype(int)""")
-
-    with st.columns(1)[0]:
-        st.markdown("### Exercise 9")
+        st.markdown(r"""
+### Exercise 8
+""")
         st.plotly_chart(fig_dict[10], use_container_width=False, config=dict(displayModeBar=False))
         with st.expander("Solution"):
-            st.code(r"""arr2 = reduce(arr.astype(float), "b c h w -> h w", "min").astype(int)""")
+            st.code(r"""arr8 = reduce(arr.astype(float), "b c h w -> h w", "min").astype(int)""")
 
     with st.columns(1)[0]:
-        st.markdown("### Exercise 10")
+        st.markdown(r"""
+### Exercise 9
+""")
         st.plotly_chart(fig_dict[11], use_container_width=False, config=dict(displayModeBar=False))
         with st.expander("Hint"):
             st.markdown("Try to split this into 2 parts. The first part should just involve creating a 3D array corresponding to the image of [0, 1] side by side.")
         with st.expander("Solution"):
-            st.code(r"""arr2 = rearrange(arr[:2], "b c h w -> c h (b w)")
+            st.code(r"""arr9 = rearrange(arr[:2], "b c h w -> c h (b w)")
 
-    arr3 = rearrange(arr2, "c (h2 h) w -> c h (h2 w)", h2=2)""")
+    arr9 = rearrange(arr9, "c (h2 h) w -> c h (h2 w)", h2=2)""")
 
     with st.columns(1)[0]:
-        st.markdown("### Exercise 11")
+        st.markdown(r"""
+### Exercise 10
+""")
         st.plotly_chart(fig_dict[12], use_container_width=False, config=dict(displayModeBar=False))
         with st.expander("Solution"):
-            st.code(r"""arr2 = rearrange(arr[1], "c h w -> c w h")""")
+            st.code(r"""arr10 = rearrange(arr[1], "c h w -> c w h")""")
 
     with st.columns(1)[0]:
-        st.markdown("### Exercise 12")
+        st.markdown(r"""
+### Exercise 11
+""")
         st.plotly_chart(fig_dict[13], use_container_width=False, config=dict(displayModeBar=False))
         with st.expander("Solution"):
-            st.code(r"""arr2 = rearrange(arr, "(b1 b2) c h w -> c (b1 w) (b2 h)", b1=2)""")
+            st.code(r"""arr11 = rearrange(arr, "(b1 b2) c h w -> c (b1 w) (b2 h)", b1=2)""")
 
     with st.columns(1)[0]:
-        st.markdown(r"""### Exercise 13
+        st.markdown(r"""
+### Exercise 12
+
 In this exercise, we use **max pooling**. This is a topic we'll dive deeper into later today, but essentially it involves splitting an array up into grid squares and taking the maximum over each of them. Note that the image below is half the standard size for this image. 
 
 You should find the `reduce` function useful here.
 """)
         st.plotly_chart(fig_dict[14], use_container_width=False, config=dict(displayModeBar=False))
         with st.expander("Solution"):
-            st.code(r"""arr2 = reduce(arr, "(b1 b2) c (h h2) (w w2) -> c (b1 h) (b2 w)", "max", h2=2, w2=2, b1=2)""")
+            st.code(r"""arr12 = reduce(arr, "(b1 b2) c (h h2) (w w2) -> c (b1 h) (b2 w)", "max", h2=2, w2=2, b1=2)""")
 
     st.markdown(r'''
 
@@ -446,14 +464,14 @@ test_cases = [
         stride=None
     ),
 ]
-for (i, case) in enumerate(test_cases):
-    if (case.size is None) or (case.stride is None):
+for (i, test_case) in enumerate(test_cases):
+    if (test_case.size is None) or (test_case.stride is None):
         print(f"Test {i} failed: attempt missing.")
     else:
-        actual = test_input.as_strided(size=case.size, stride=case.stride)
-        if (case.output != actual).any():
+        actual = test_input.as_strided(size=test_case.size, stride=test_case.stride)
+        if (test_case.output != actual).any():
             print(f"Test {i} failed:")
-            print(f"Expected: {case.output}")
+            print(f"Expected: {test_case.output}")
             print(f"Actual: {actual}\n")
         else:
             print(f"Test {i} passed!\n")
@@ -578,7 +596,9 @@ if MAIN:
 """)
 
         with st.expander("Hint"):
-            st.markdown("The trace is the sum of all the elements you get from starting at `[0, 0]` and then continually stepping down and right one element. Use strides to create a 1D array which contains these elements.")
+            st.markdown(r"""
+The trace is the sum of all the elements you get from starting at `[0, 0]` and then continually stepping down and right one element. Use strides to create a 1D array which contains these elements.
+""")
         
         with st.expander("Solution"):
             st.markdown(r"""
@@ -616,17 +636,23 @@ if MAIN:
 """)
 
         with st.expander("Hint 1"):
-            st.markdown(r"""You want your output array to be as follows:
+            st.markdown(r"""
+You want your output array to be as follows:
     
 ```output[i] = sum_over_j ( mat[i, j] * vec[j] )```
 
-so first try to create an array with `arr[i, j] = mat[i, j] * vec[j]`, then we can sum over this to get our output.""")
+so first try to create an array with `arr[i, j] = mat[i, j] * vec[j]`, then we can sum over this to get our output.
+""")
 
         with st.expander("Hint 2"):
-            st.markdown(r"""Use striding to create an expanded vector with `vec_expanded[i, j] = vec[j]`, then we can compute `arr` as described in hint 1.""")
+            st.markdown(r"""
+Use striding to create an expanded vector with `vec_expanded[i, j] = vec[j]`, then we can compute `arr` as described in hint 1.
+""")
 
         with st.expander("Help - I'm passing the first test, but failing the second."):
-            st.markdown(r"""It's possible that the input matrices you recieve could themselves be the output of an `as_strided` operation, so that they're represented in memory in a non-contiguous way. Make sure that your `as_strided `operation is using the strides from the original input arrays, i.e. it's not just assuming the last element in the `stride()` tuple is 1.""")
+            st.markdown(r"""
+It's possible that the input matrices you recieve could themselves be the output of an `as_strided` operation, so that they're represented in memory in a non-contiguous way. Make sure that your `as_strided `operation is using the strides from the original input arrays, i.e. it's not just assuming the last element in the `stride()` tuple is 1.
+""")
 
         with st.expander("Solution"):
             st.markdown(r"""
@@ -675,7 +701,9 @@ if MAIN:
             st.markdown(r"""
 If you did the first one, this isn't too dissimilar. We have:
 
-```output[i, k] = sum_over_j ( matA[i, j] * matB[j, k] )```
+```
+output[i, k] = sum_over_j ( matA[i, j] * matB[j, k] )
+```
 
 so in this case, try to create an array with `arr[i, j, k] = matA[i, j] * matB[j, k]`, and then sum this array over `j` to get `output`.
 
@@ -683,9 +711,11 @@ We need to create expanded versions of both `matA` and `matB` in order to take t
 """)
 
         with st.expander("Hint 2"):
-            st.markdown(r"""We want `matA_expanded[i, j, k] = matA[i, j]`, so our stride for `matA should be `(matA.stride(0), matA.stride(1), 0)`.
+            st.markdown(r"""
+We want `matA_expanded[i, j, k] = matA[i, j]`, so our stride for `matA should be `(matA.stride(0), matA.stride(1), 0)`.
         
-A similar idea applies for `matB`.""")
+A similar idea applies for `matB`.
+""")
 
         with st.expander("Solution"):
             st.markdown(r"""
@@ -743,13 +773,19 @@ Here are some questions to make sure you've understood the material. Once you fi
 """)
 
     with st.expander("Why would convolutional layers be less likely to overfit data than standard linear (fully connected) layers?"):
-        st.markdown(r"""Convolutional layers require significantly fewer weights to be learned. This is because the same kernel is applied all across the image, rather than every pair of `(input, output)` nodes requiring a different weight to be learned.""")
+        st.markdown(r"""
+Convolutional layers require significantly fewer weights to be learned. This is because the same kernel is applied all across the image, rather than every pair of `(input, output)` nodes requiring a different weight to be learned.
+""")
 
     with st.expander("Suppose you fixed some random permutation of the pixels in an image, and applied this to all images in your dataset, before training a convolutional neural network for classifying images. Do you expect this to be less effective, or equally effective?"):
-        st.markdown(r"""It will be less effective, because CNNs work thanks to **spatial locality** - groups of pixels close together are more meaningful. For instance, CNNs will often learn convolutions at an early layer which recognise gradients or simple shapes. If you permute the pixels (even if you permute in the same way for every image), you destroy locality. """)
+        st.markdown(r"""
+It will be less effective, because CNNs work thanks to **spatial locality** - groups of pixels close together are more meaningful. For instance, CNNs will often learn convolutions at an early layer which recognise gradients or simple shapes. If you permute the pixels (even if you permute in the same way for every image), you destroy locality. 
+""")
 
     with st.expander("If you have a 28x28 image, and you apply a 3x3 convolution with stride 1, padding 1, what shape will the output be?"):
-        st.markdown(r"""It will be the same shape, i.e. `28x28`. In the post linked above, this is described as **same padding**. Tomorrow, we'll build an MNIST classifier which uses these convolutions.""")
+        st.markdown(r"""
+It will be the same shape, i.e. `28x28`. In the post linked above, this is described as **same padding**. Tomorrow, we'll build an MNIST classifier which uses these convolutions.
+""")
 
     st.markdown(r"""
 ## conv1d minimal

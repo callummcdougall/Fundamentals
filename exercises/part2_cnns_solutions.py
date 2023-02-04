@@ -146,14 +146,14 @@ test_cases = [
         stride=(12, 4, 2, 1)
     ),
 ]
-for (i, case) in enumerate(test_cases):
-    if (case.size is None) or (case.stride is None):
+for (i, test_case) in enumerate(test_cases):
+    if (test_case.size is None) or (test_case.stride is None):
         print(f"Test {i} failed: attempt missing.")
     else:
-        actual = test_input.as_strided(size=case.size, stride=case.stride)
-        if (case.output != actual).any():
+        actual = test_input.as_strided(size=test_case.size, stride=test_case.stride)
+        if (test_case.output != actual).any():
             print(f"Test {i} failed:")
-            print(f"Expected: {case.output}")
+            print(f"Expected: {test_case.output}")
             print(f"Actual: {actual}\n")
         else:
             print(f"Test {i} passed!\n")
