@@ -129,10 +129,7 @@ def make_rays_1d(num_pixels: int, y_limit: float) -> t.Tensor:
         [[0, 0, 0], [1, 1, 0]],
     ]
     '''
-    rays = t.zeros((num_pixels, 2, 3), dtype=t.float32)
-    t.linspace(-y_limit, y_limit, num_pixels, out=rays[:, 1, 1])
-    rays[:, 1, 0] = 1
-    return rays
+    pass
 
 
 def render_lines_with_plotly(lines: t.Tensor, bold_lines: t.Tensor = t.Tensor()):
@@ -157,6 +154,32 @@ if MAIN:
     rays1d = make_rays_1d(9, 10.0)
     fig = render_lines_with_plotly(rays1d)
 ```
+""")
+    with st.expander("Soluion"):
+        st.markdown(r"""
+def make_rays_1d(num_pixels: int, y_limit: float) -> t.Tensor:
+    '''
+    num_pixels: The number of pixels in the y dimension. Since there is one ray per pixel, this is also the number of rays.
+    y_limit: At x=1, the rays should extend from -y_limit to +y_limit, inclusive of both endpoints.
+
+    Returns: shape (num_pixels, num_points=2, num_dim=3) where the num_points dimension contains (origin, direction) and the num_dim dimension contains xyz.
+
+    Example of make_rays_1d(9, 1.0): [
+        [[0, 0, 0], [1, -1.0, 0]],
+        [[0, 0, 0], [1, -0.75, 0]],
+        [[0, 0, 0], [1, -0.5, 0]],
+        ...
+        [[0, 0, 0], [1, 0.75, 0]],
+        [[0, 0, 0], [1, 1, 0]],
+    ]
+    '''
+    rays = t.zeros((num_pixels, 2, 3), dtype=t.float32)
+    t.linspace(-y_limit, y_limit, num_pixels, out=rays[:, 1, 1])
+    rays[:, 1, 0] = 1
+    return rays
+""")
+
+    st.markdown(r"""
 
 ### Tip - the `out` keyword argument
 
@@ -326,7 +349,7 @@ def intersect_ray_1d(ray: t.Tensor, segment: t.Tensor) -> bool:
 
     # Solve equation (return False if no solution)
     try:
-        sol = t.linalg.solve(A, B)
+        sol = t.linalg.solve(mat, vec)
     except:
         return False
     
@@ -373,8 +396,7 @@ You can read more [here](https://github.com/patrick-kidger/torchtyping).
 Next, implement a batched version that takes multiple rays, multiple line segments, and returns a boolean for each ray indicating whether **any** segment intersects with that ray.
 
 Note - in the batched version, we don't want the solver to throw an exception just because some of the equations don't have a solution - these should just return False. 
-""")
-    st.markdown(r"""
+
 ### Tip - Ellipsis
 
 You can use an ellipsis `...` in an indexing expression to avoid repeated `:' and to write indexing expressions that work on varying numbers of input dimensions. 
@@ -546,6 +568,8 @@ Now we're going to make use of the z dimension and have rays emitted from the or
         st.markdown(r"""
 #### Exercise - implement `make_rays_2d`
 
+Implement `make_rays_2d` analogously to `make_rays_1d`. The result should look like a pyramid with the tip at the origin.
+
 ```python
 def make_rays_2d(num_pixels_y: int, num_pixels_z: int, y_limit: float, z_limit: float) -> t.Tensor:
     '''
@@ -564,8 +588,6 @@ if MAIN:
     rays_2d = make_rays_2d(10, 10, 0.3, 0.3)
     render_lines_with_plotly(rays_2d)
 ```
-
-Implement `make_rays_2d` analogously to `make_rays_1d`. The result should look like a pyramid with the tip at the origin.
 """)
         with st.expander("Help - I'm not sure how to implement this function."):
             st.markdown(r"""
@@ -969,7 +991,7 @@ def raytrace_mesh(
 
     # Get boolean of intersects, and use it to set distance to infinity wherever there is no intersection
     intersects = ((u >= 0) & (v >= 0) & (u + v <= 1) & ~is_singular)
-    s[~intersects] = t.inf
+    s[~intersects] = float("inf") # t.inf
 
     # Get the minimum distance (over all triangles) for each ray
     return s.min(dim=-1).values

@@ -15,6 +15,24 @@ import part1_raytracing_tests as tests
 
 MAIN = __name__ == "__main__"
 
+if "SKIP":
+    """Teacher only - generate a nicely transformed Pikachu from the STL.
+    This reduces messing around with 3D transformations, which isn't the learning objective today.
+    """
+    from stl import mesh
+
+    model = mesh.Mesh.from_file("pikachu.stl")
+    triangles = t.tensor(model.vectors.copy())
+    mesh_center = triangles.mean(dim=(0, 1))
+    triangles -= mesh_center  # Shift to origin
+    # Rotate standing up (isn't the cutest pose but good enough)
+    R = t.tensor([[1.0, 0.0, 0.0], [0.0, 0.0, 1.0], [0.0, 1.0, 0.0]])
+    triangles = t.einsum("ij,...i->...j", R, triangles)
+    # Scale down so they can use limits of 1
+    triangles /= 20.0
+    with open("pikachu.pt", "wb") as f:
+        t.save(triangles, f)
+
 # %%
 
 def make_rays_1d(num_pixels: int, y_limit: float) -> t.Tensor:
