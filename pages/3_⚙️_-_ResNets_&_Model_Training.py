@@ -21,17 +21,16 @@ In part 2, we'll start by defining a few more important modules (e.g. `BatchNorm
 
 This section should take approximately **2-3 hours**.
 
-## 3️⃣ Finetuning ResNet (bonus)
-
-If you get to part 3, this is an opportunity to try finetuning your ResNet. Finetuning involves taking a pretrained model, and training it to perform a slightly different task (sometimes altering the architecture at the end of the model, and only training that part while freezing the rest). We've given much less guidance for this section, since it builds on all the previous sections.
-
-This section may take quite a long time to finish, and you're encouraged to go further with it over the next couple of days if it seems exciting to you.
-
 ---
 
 Today's exercises are probably the most directly relevant for the rest of the programme out of everything we've done this week. This is because we'll be looking at important concepts like training loops and neural network architectures. Additionally, the task of assembling a complicated neural network architecture from a set of instructions will lead straight into next week, when we'll be building our own transformers! So forming a deep understanding of everything that's going on in today's exercises will be very helpful going forwards.
 
 """)
+# ## 3️⃣ Finetuning ResNet (bonus)
+
+# If you get to part 3, this is an opportunity to try finetuning your ResNet. Finetuning involves taking a pretrained model, and training it to perform a slightly different task (sometimes altering the architecture at the end of the model, and only training that part while freezing the rest). We've given much less guidance for this section, since it builds on all the previous sections.
+
+# This section may take quite a long time to finish, and you're encouraged to go further with it over the next couple of days if it seems exciting to you.
  
 def section_cnn():
     st.sidebar.markdown(r"""
@@ -1047,9 +1046,9 @@ If you get stuck, then you can look at more parts of the PyTorch tutorial page (
 Good luck!
 """)
  
-func_list = [section_home, section_cnn, section_resnet, section_finetune]
+func_list = [section_home, section_cnn, section_resnet] #, section_finetune]
 
-page_list = ["🏠 Home", "1️⃣ Building & Training a CNN", "2️⃣ Assembling ResNet", "3️⃣ Finetuning ResNet (bonus)"]
+page_list = ["🏠 Home", "1️⃣ Building & Training a CNN", "2️⃣ Assembling ResNet"] #, "3️⃣ Finetuning ResNet (bonus)"]
 page_dict = {name: idx for idx, name in enumerate(page_list)}
 
 def page():
