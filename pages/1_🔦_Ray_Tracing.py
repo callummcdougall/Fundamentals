@@ -9,7 +9,7 @@ import re
 import json
 
 def read_from_html(filename):
-    filename = f"../images/{filename}.html"
+    filename = f"images/{filename}.html"
     with open(filename) as f:
         html = f.read()
     call_arg_str = re.findall(r'Plotly\.newPlot\((.*)\)', html)[0]
