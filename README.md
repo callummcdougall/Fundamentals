@@ -8,6 +8,8 @@ Some highlights from this chapter include:
 * Working with [weights and biases](https://wandb.ai/site) to optimise hyperparameters
 * Implementing your own backpropagation mechanism
 
+The exercises exist in two forms: as self-contained Colab notebooks (links below), and in this GitHub repo (accessible via the [Streamlit homepage](https://fundamentals.streamlit.app/) which reads from this repo). Streamlit also allows you to publish webpages, so you can access that link to go to the Streamlit app homepage, and read all the same content from this README there.
+
 <img src="https://raw.githubusercontent.com/callummcdougall/Fundamentals/main/images/prereqs.png" width=450>
 
 ## How you should use this material
