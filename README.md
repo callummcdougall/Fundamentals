@@ -8,6 +8,8 @@ Some highlights from this chapter include:
 * Working with [weights and biases](https://wandb.ai/site) to optimise hyperparameters
 * Implementing your own backpropagation mechanism
 
+<img src="https://raw.githubusercontent.com/callummcdougall/Fundamentals/main/images/prereqs.png" width=450>
+
 ## How you should use this material
 
 ### Option 1: Colab
