@@ -914,7 +914,7 @@ The shape of `x_strided` should be `(in_channels, output_width, kernel_width)`. 
 
         with st.expander("Hint 3"):
             st.markdown(r"""
-The strides for the first two dimensions of `x_strided` should be the same as `x.stride()`. For the stride corresponding to `kernel_width`, every time we move the kernel one step along inside `x` we also want to move one step inside `x`, so this stride should be `x.stride()[1]`.
+The strides for the first two dimensions of `x_strided` should be the same as `x.stride()`. For the stride corresponding to `kernel_width`, every time we move the kernel one step along inside `x` we also want to move one step inside `x`, so this stride should be `x.stride(1)`.
         
 So we have:
 
@@ -923,8 +923,9 @@ xsB, xsI, xsWi = x.stride()
 x_new_stride = (xsB, xsI, xsWi, xsWi)
 ```
 
-Now try and turn this into a full function. Return to Hint1 if you're confused.
+Below is a diagram for how this should work (assuming batch dimension is 1, to make the diagram simpler).
 """)
+            st_image('conv1d_illustration_strides.png', width=900)
 
         with st.expander("Solution"):
             st.markdown(r"""
