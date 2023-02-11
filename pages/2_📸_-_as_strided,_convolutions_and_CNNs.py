@@ -48,6 +48,9 @@ if "fig_dict" not in st.session_state or "mnist_image" not in st.session_state["
 fig_dict = st.session_state["fig_dict"]
 
 def section0():
+    st.markdown(r"""
+Links to Colab: [**exercises**](https://colab.research.google.com/drive/1hQE1inYldFI_mmpCiLbIW8yI2C-PxBev?usp=sharing), [**solutions**](https://colab.research.google.com/drive/1VZk9ba3j7HJP9ChntblOoEAwxZukCgHn?usp=sharing).
+""")
     st_image("cnn.png", 350)
     st.markdown(r"""
 # as_strided, Convolutions and CNNs
@@ -88,10 +91,6 @@ def section1():
     <li><a class="contents-el" href="#einsum">Einsum</a></li>
 </ul>
 """, unsafe_allow_html=True)
-
-    st.markdown(r"""
-Links to Colab: [**exercises**](https://colab.research.google.com/drive/1hQE1inYldFI_mmpCiLbIW8yI2C-PxBev?usp=sharing), [**solutions**](https://colab.research.google.com/drive/1VZk9ba3j7HJP9ChntblOoEAwxZukCgHn?usp=sharing).
-""")
     st.markdown(r"""
 # Einops and Einsum
 
