@@ -38,12 +38,13 @@ def read_from_html(filename):
 def get_fig_dict():
     fig_dict = {str(i): read_from_html(f"fig{i}") for i in range(1, 16)}
     fig_dict = {(int(s) if s.isdigit() else s): fig for s, fig in fig_dict.items()}
-    fig_dict_2 = {i: read_from_html(i) for i in ["loss_curve", "mnist_probs_after_training", "mnist_probs_before_training"]}
+    fig_dict_2 = {i: read_from_html(i) for i in ["loss_curve", "mnist_probs_after_training", "mnist_probs_before_training", "mnist_image"]}
     return {**fig_dict, **fig_dict_2}
 
-if "fig_dict" not in st.session_state:
+if "fig_dict" not in st.session_state or "mnist_image" not in st.session_state["fig_dict"]:
     fig_dict = get_fig_dict()
-    st.session_state["fig_dict"] = fig_dict
+    old_fig_dict = st.session_state.get("fig_dict", {})
+    st.session_state["fig_dict"] = {**old_fig_dict, **fig_dict}
 fig_dict = st.session_state["fig_dict"]
 
 def section0():
@@ -116,6 +117,7 @@ from torch.utils.data import DataLoader
 from IPython.display import display
 import plotly.express as px
 from PIL import Image
+import functools
 
 from part2_cnns_utils import display_array_as_img
 import part2_cnns_tests as tests
@@ -125,7 +127,7 @@ MAIN = __name__ == "__main__"
 arr = np.load("numbers.npy")
 ```
 
-`arr` is a 4D numpy array. The first axes corresponds to the number, and the next three axes are channels (i.e. RGB), height and width respectively. You have the function `utils.display_array_as_img` which takes in a numpy array and displays it as an image. There are two possible ways this function can be run:
+`arr` is a 4D numpy array. The first axes corresponds to the number, and the next three axes are channels (i.e. RGB), height and width respectively. You have the function `display_array_as_img` which takes in a numpy array and displays it as an image. There are two possible ways this function can be run:
 
 * If the input is three-dimensional, the dimensions are interpreted as `(channel, height, width)` - in other words, as an RGB image.
 * If the input is two-dimensional, the dimensions are interpreted as `(height, width)` - i.e. a monochrome image.
@@ -151,7 +153,7 @@ A series of images follow below, which have been created using `einops` function
         st.markdown(r"""
 ### Exercise 1
 
-Here, you should stack each of the images horizontally.
+Here, you should stack each of the images horizontally. This only requires a call to `rearrange`.
 """)
         st.plotly_chart(fig_dict[2], use_container_width=False, config=dict(displayModeBar=False))
         with st.expander("Solution"):
@@ -160,6 +162,8 @@ Here, you should stack each of the images horizontally.
     with st.columns(1)[0]:
         st.markdown(r"""
 ### Exercise 2
+
+This exercise will use `repeat` rather than `rearrange`.
 """)
         st.plotly_chart(fig_dict[3], use_container_width=False, config=dict(displayModeBar=False))
         with st.expander("Solution"):
@@ -168,6 +172,8 @@ Here, you should stack each of the images horizontally.
     with st.columns(1)[0]:
         st.markdown(r"""
 ### Exercise 3
+
+The solution here is quite similar to the previous one, but just a bit more complicated.
 """)
         st.plotly_chart(fig_dict[4], use_container_width=False, config=dict(displayModeBar=False))
         with st.expander("Solution"):
@@ -176,14 +182,21 @@ Here, you should stack each of the images horizontally.
     with st.columns(1)[0]:
         st.markdown(r"""
 ### Exercise 4
+
+Again, you'll want to use a `repeat` to stretch this image. Make sure you understand what the difference between `"x -> (2 x)"` and `"x -> (x 2)"` is, in einops repeat operations.
 """)
         st.plotly_chart(fig_dict[5], use_container_width=False, config=dict(displayModeBar=False))
         with st.expander("Solution"):
             st.code(r"""arr4 = repeat(arr[0], "c h w -> c (h 2) w")""")
+            st.markdown(r"""
+Using `"x -> (2 x)"` means the dimension is repeated twice, e.g. [1, 2, 3] becomes [1, 2, 3, 1, 2, 3]. Using `"x -> (x 2)"` means the dimension is stretched, e.g. [1, 2, 3] becomes [1, 1, 2, 2, 3, 3].
+""")
 
     with st.columns(1)[0]:
         st.markdown(r"""
 ### Exercise 5
+
+Here, we're splitting up the RGB components of the image into three different monochrome images, and stacking them next to each other. Recall the instructions at the start - if you run `display_array_as_img` on a two-dimensional array, it will display it as a monochrome image (interpreting the dims as `(height, width)`).
 """)
         st.plotly_chart(fig_dict[6], use_container_width=False, config=dict(displayModeBar=False))
         with st.expander("Solution"):
@@ -192,6 +205,8 @@ Here, you should stack each of the images horizontally.
     with st.columns(1)[0]:
         st.markdown(r"""
 ### Exercise 6
+
+This only requires a call to `rearrange`. This is also the first time you'll have to pass a keyword argument after your string (because you need to specify either that the number of rows is 2, or that the number of cols is 3).
 """)
         st.plotly_chart(fig_dict[7], use_container_width=False, config=dict(displayModeBar=False))
         with st.expander("Solution"):
@@ -200,6 +215,12 @@ Here, you should stack each of the images horizontally.
     with st.columns(1)[0]:
         st.markdown(r"""
 ### Exercise 7
+
+The intention here is for you to use the `reduce` function. The function you should use for reduction is `"max"`, over the color dimension (since black is just `(0, 0, 0)` so max over that is still black, but all the other pastel colors have at least one channel with value `255` so max over that gives us white).
+
+Remember that `reduce` operations can also rearrange at the same time. For instance, `"x y z -> (x y)"` both reduces over the `z` dimension and flattens the two remaining dimensions.
+
+Also, note that you'll need to cast the array to `float` before you reduce it, and then back to `int` before displaying it, otherwise you'll get an error. You can do this using `arr.astype(float)` and `arr.astype(int)`.
 """)
         st.plotly_chart(fig_dict[8], use_container_width=False, config=dict(displayModeBar=False))
         with st.expander("Solution"):
@@ -208,50 +229,54 @@ Here, you should stack each of the images horizontally.
     with st.columns(1)[0]:
         st.markdown(r"""
 ### Exercise 8
+
+Here, we reduce using a different function than `max`, and we're also reducing over the digits (batch dimension) rather than just the color channel.
 """)
         st.plotly_chart(fig_dict[10], use_container_width=False, config=dict(displayModeBar=False))
         with st.expander("Solution"):
             st.code(r"""arr8 = reduce(arr.astype(float), "b c h w -> h w", "min").astype(int)""")
 
+#     with st.columns(1)[0]:
+#         st.markdown(r"""
+# ### Exercise 9
+# """)
+#         st.plotly_chart(fig_dict[11], use_container_width=False, config=dict(displayModeBar=False))
+#         with st.expander("Hint"):
+#             st.markdown("Try to split this into 2 parts. The first part should just involve creating a 3D array corresponding to the image of [0, 1] side by side.")
+#         with st.expander("Solution"):
+#             st.code(r"""arr9 = rearrange(arr[:2], "b c h w -> c h (b w)")
+
+#     arr9 = rearrange(arr9, "c (h2 h) w -> c h (h2 w)", h2=2)""")
+
     with st.columns(1)[0]:
         st.markdown(r"""
 ### Exercise 9
-""")
-        st.plotly_chart(fig_dict[11], use_container_width=False, config=dict(displayModeBar=False))
-        with st.expander("Hint"):
-            st.markdown("Try to split this into 2 parts. The first part should just involve creating a 3D array corresponding to the image of [0, 1] side by side.")
-        with st.expander("Solution"):
-            st.code(r"""arr9 = rearrange(arr[:2], "b c h w -> c h (b w)")
 
-    arr9 = rearrange(arr9, "c (h2 h) w -> c h (h2 w)", h2=2)""")
+Can you figure out how to transpose an image using `rearrange` ?
+""")
+        st.plotly_chart(fig_dict[12], use_container_width=False, config=dict(displayModeBar=False))
+        with st.expander("Solution"):
+            st.code(r"""arr9 = rearrange(arr[1], "c h w -> c w h")""")
+
+#     with st.columns(1)[0]:
+#         st.markdown(r"""
+# ### Exercise 11
+# """)
+#         st.plotly_chart(fig_dict[13], use_container_width=False, config=dict(displayModeBar=False))
+#         with st.expander("Solution"):
+#             st.code(r"""arr11 = rearrange(arr, "(b1 b2) c h w -> c (b1 w) (b2 h)", b1=2)""")
 
     with st.columns(1)[0]:
         st.markdown(r"""
 ### Exercise 10
-""")
-        st.plotly_chart(fig_dict[12], use_container_width=False, config=dict(displayModeBar=False))
-        with st.expander("Solution"):
-            st.code(r"""arr10 = rearrange(arr[1], "c h w -> c w h")""")
 
-    with st.columns(1)[0]:
-        st.markdown(r"""
-### Exercise 11
-""")
-        st.plotly_chart(fig_dict[13], use_container_width=False, config=dict(displayModeBar=False))
-        with st.expander("Solution"):
-            st.code(r"""arr11 = rearrange(arr, "(b1 b2) c h w -> c (b1 w) (b2 h)", b1=2)""")
-
-    with st.columns(1)[0]:
-        st.markdown(r"""
-### Exercise 12
-
-In this exercise, we use **max pooling**. This is a topic we'll dive deeper into later today, but essentially it involves splitting an array up into grid squares and taking the maximum over each of them. Note that the image below is half the standard size for this image. 
+Finally, here we'll use **max pooling**. This is a topic we'll dive deeper into later today, but essentially it involves splitting an array up into grid squares and taking the maximum over each of them. Note that the image below is half the standard size for this image. 
 
 You should find the `reduce` function useful here.
 """)
         st.plotly_chart(fig_dict[14], use_container_width=False, config=dict(displayModeBar=False))
         with st.expander("Solution"):
-            st.code(r"""arr12 = reduce(arr, "(b1 b2) c (h h2) (w w2) -> c (b1 h) (b2 w)", "max", h2=2, w2=2, b1=2)""")
+            st.code(r"""arr10 = reduce(arr, "(b1 b2) c (h h2) (w w2) -> c (b1 h) (b2 w)", "max", h2=2, w2=2, b1=2)""")
 
     st.markdown(r'''
 
@@ -260,9 +285,9 @@ You should find the `reduce` function useful here.
 Einsum is a very useful function for performing linear operations, which you'll probably be using a lot during this programme. Although there are many different kinds of operations you can perform, they are all derived from three key rules:
 
 1. Repeating letters in different inputs means those values will be multiplied, and those products will be in the output. 
-    * For example, `M = einsum("ij,jk->ik", A, B)` corresponds to the matrix equation $M=AB$.
+    * For example, `M = einsum("ij,jk->ik", A, B)` corresponds to the matrix equation $M=AB$ (since we have $M_{ik} = \sum_j A_{ij} B_{jk}$)
 2. Omitting a letter means that the axis will be summed.
-    * For examples, if `x` is a 2D array with shape `(n0, n1)`, then `einsum("ij->i", x)` will be a 1D array of length `n0` containing the row sums of `x`.
+    * For examples, if `x` is a 2D array with shape `(I, J)`, then `einsum("ij->i", x)` will be a 1D array of length `I` containing the row sums of `x`.
 3. We can return the unsummed axes in any order.
     * For example, `einsum("ijk->kji", x)` does the same thing as `einops.rearrange(x, "i j k -> k j i")`.
 
@@ -271,9 +296,15 @@ A quick note about `fancy_einsum` before we start - it behaves differently than 
 For instance, `np.einsum` could use a string like `"ij->i"` to mean "sum a single array over the second dimension", but `fancy_einsum` would get confused because it sees `"ij"` and `"i"` each as single words, referring to individual dimensions. So you'd need `"i j -> i"` in this case. To avoid confusion, it's recommended to only use `fancy_einsum` rather than switching between the two (there will be cases when you'll be thankful for `fancy_einsum`'s features!).
 ''')
 
+    st.info(r"""
+PSA - since originally writing this, einops have created their own version: `einops.einsum`. I don't know exactly how this differs from the `fancy_einsum` version but it does also seem to allow for the same syntax (i.e. referring to dimensions with words). Also, it's likely that `einops.einsum` will eventually be merged with the rest of einops, i.e. you can string together `rearrange` and `reduce` operations in the same function call. So I'd recommend using that instead of `fancy_einsum`. This is not a big deal though!
+
+The order of operations in `fancy_einsum` is like the rest of einops functions: the tensor (or tensors) come before the string. This is different to `fancy_einsum`, where the tensors come after the string.
+""")
+
     with st.columns(1)[0]:
         st.markdown(r"""
-#### Exercise - implement basic functions using `einsum`
+### Exercise - implement basic functions using `einsum`
 
 In the following exercises, you'll write simple functions using `einsum` which replicate the functionality of standard NumPy functions: trace, matrix multiplication, inner and outer products. We've also included some test functions which you should run.
 
@@ -397,14 +428,20 @@ We can call the `stride` method to get the strides of this particular array. Run
 """)
     with st.columns(1)[0]:
         st.markdown(r"""
-#### Exercise - fill in the correct size and stride
+### Exercise - fill in the correct size and stride
 
 In the exercises below, we will work with the `test_input` tensor above. You should fill in the `size` and `stride` arguments so that calling `test_input.as_strided` with these arguments produces the desired output. When you run the cell, the `for` loop at the end will iterate through the test cases and print out whether the test passed or failed.
 
 We've already filled in the first one as an example. The output is a 1D tensor of length 4 (hence we want `size=(4,)`), and the values are the first row of `input_tensor` (hence we want to move one element along the `input_tensor` at each step, i.e. `stride=1`).
 
 By the end of these examples, hopefully you'll have a clear idea of what's going on. If you're still confused by some of these, then `solutions.py` contains some annotations to explain the answers.
+""")
+        st.error(r"""
+*Note - people have often mentioned that `as_strided` are quite annoying and confusing exercises. If these are taking a long time or you're finding them frustrating, you should definitely be willing to look at the answers! The intermediate stride exercises below this block are more conceptually important, but they're still not the most crucial part of today's material.*
 
+*You probably shouldn't spend more than ~20-25 minutes on this set of exercises.*
+""")
+        st.markdown(r"""
 ```python
 import torch as t
 from collections import namedtuple
@@ -606,7 +643,7 @@ Now that you're comfortable with the basics, we'll dive a little deeper with `as
 """)
     with st.columns(1)[0]:
         st.markdown(r"""
-#### Exercise - trace
+### Exercise - trace
 
 ```python
 def as_strided_trace(mat: t.Tensor) -> t.Tensor:
@@ -645,7 +682,7 @@ def as_strided_trace(mat: t.Tensor) -> t.Tensor:
 
     with st.columns(1)[0]:
         st.markdown(r"""
-#### Exercise - matrix-vector multiplication
+### Exercise - matrix-vector multiplication
 
 ```python
 def as_strided_mv(mat: t.Tensor, vec: t.Tensor) -> t.Tensor:
@@ -707,7 +744,7 @@ def as_strided_mv(mat: t.Tensor, vec: t.Tensor) -> t.Tensor:
 
     with st.columns(1)[0]:
         st.markdown(r"""
-#### Exercise - matrix-matrix multiplication
+### Exercise - matrix-matrix multiplication
 
 ```python
 def as_strided_mm(matA: t.Tensor, matB: t.Tensor) -> t.Tensor:
@@ -838,7 +875,7 @@ A typical convolution operation is illustrated in the sketch below. Some notes o
 
     with st.columns(1)[0]:
         st.markdown(r"""
-#### Exercise - implement `conv1d_minimal`
+### Exercise - implement `conv1d_minimal`
 
 Below, you should implement `conv1d_minimal`. This is a function which works just like `conv1d`, but takes the default stride and padding values (these will be added back in later). You are allowed to use `as_strided` and `einsum`.
 
@@ -932,7 +969,7 @@ For this reason, 1D convolutions tend to be used for signals (e.g. audio), 2D co
 """)
     with st.columns(1)[0]:
         st.markdown(r"""
-#### Exercise - implement `conv2d_minimal`
+### Exercise - implement `conv2d_minimal`
 
 You should implement `conv2d` in a similar way to `conv1d`. Again, this is expected to be difficult and there are several hints you can go through.
 
@@ -1004,7 +1041,7 @@ out_channels in_channels kernel_height kernel_width \
 """)
     with st.columns(1)[0]:
         st.markdown(r"""
-#### Exercise - implement `pad1d` and `pad2d`
+### Exercise - implement `pad1d` and `pad2d`
 
 For a full version of `conv`, and for `maxpool` (which will follow shortly), you'll need to implement `pad` helper functions. PyTorch has some very generic padding functions, but to keep things simple and build up gradually, we'll write 1D and 2D functions individually.
 
@@ -1099,7 +1136,7 @@ Docs for pytorch's `conv1d` can be found [here](https://pytorch.org/docs/stable/
 """)
     with st.columns(1)[0]:
         st.markdown(r"""
-#### Exercise - implement `conv1d`
+### Exercise - implement `conv1d`
 
 ```python
 def conv1d(x: t.Tensor, weights: t.Tensor, stride: int = 1, padding: int = 0) -> t.Tensor:
@@ -1161,7 +1198,7 @@ def conv1d(x: t.Tensor, weights: t.Tensor, stride: int = 1, padding: int = 0) ->
 
     with st.columns(1)[0]:
         st.markdown(r"""
-#### Exercise - implement `conv2d`
+### Exercise - implement `conv2d`
 
 A recurring pattern in these 2d functions is allowing the user to specify either an int or a pair of ints for an argument: examples are stride and padding. We've provided some type aliases and a helper function to simplify working with these.
 
@@ -1250,7 +1287,7 @@ The way multiple channels work is also different. A convolution has some number 
 """)
     with st.columns(1)[0]:
         st.markdown(r"""
-#### Exercise - implement `maxpool2d`
+### Exercise - implement `maxpool2d`
 
 Implement `maxpool2d` using `torch.as_strided` and `torch.amax` (= max over axes) together. Your version should behave the same as the PyTorch version, but only the indicated arguments need to be supported.
 """)
@@ -1411,7 +1448,7 @@ The first module you should implement is `MaxPool2d`. This will relatively simpl
 """)
     with st.columns(1)[0]:
         st.markdown(r"""
-#### Exercise - implement `MaxPool2d`
+### Exercise - implement `MaxPool2d`
 
 You should fill in the three methods of the `MaxPool2d` class below.
 
@@ -1496,7 +1533,7 @@ Flatten is most often used to stack over all non-batched dimensions, which inclu
 
     with st.columns(1)[0]:
         st.markdown(r"""
-#### Exercise - implement `ReLU` and `Flatten`
+### Exercise - implement `ReLU` and `Flatten`
 
 Note that ReLU's constructor has no arguments, so it doesn't need an `extra_repr`.
 
@@ -1626,7 +1663,7 @@ The name for this is **Xavier (uniform) initialisation**.
 """)
     with st.columns(1)[0]:
         st.markdown(r"""
-#### Exercise - implement `nn.Linear`
+### Exercise - implement `nn.Linear`
 
 Remember, you should define the weights (and bias, if appropriate) in the `__init__` block. Also, make sure not to mix up `bias` (which is the boolean parameter to `__init__`) and `self.bias` (which should either be the actual bias tensor, or `None` if `bias` is false).
 
@@ -1714,7 +1751,7 @@ Finally, we'll implement a module version of our `conv2d` function. This should 
 
     with st.columns(1)[0]:
         st.markdown(r"""
-#### Exercise - implement the `Conv2d` module
+### Exercise - implement the `Conv2d` module
 
 ```python
 class Conv2d(nn.Module):
@@ -1795,14 +1832,15 @@ class SimpleCNN(nn.Module):
     def __init__(self):
         super().__init__()
 
-        self.conv = Conv2d(in_channels=1, out_channels=32, kernel_size=3, stride=1, padding=1)
+        self.conv = Conv2d(in_channels=1, out_channels=16, kernel_size=3, stride=1, padding=1)
         self.maxpool = MaxPool2d(kernel_size=2, stride=2, padding=0)
         self.relu = ReLU()
         self.flatten = Flatten()
-        self.fc = Linear(in_features=32*14*14, out_features=10)
+        self.fc = Linear(in_features=16*14*14, out_features=10)
 
     def forward(self, x: t.Tensor) -> t.Tensor:
         return self.fc(self.flatten(self.relu(self.maxpool(self.conv(x)))))
+
 
 if MAIN:
     model = SimpleCNN()
@@ -1812,29 +1850,31 @@ if MAIN:
 Now, let's load in and inspect our training data (which involves doing some basic transformations). Don't worry about understanding this in detail, we'll go over it all in more detail next session.
 
 ```python
-if MAIN:
+def get_mnist():
+    '''Returns MNIST training data'''
     mnist_transform = transforms.Compose([
         transforms.ToTensor(),
         transforms.Normalize((0.1307,), (0.3081,))
     ])
+    mnist_trainset = datasets.MNIST(root="./data", train=True, download=True, transform=mnist_transform)
+    mnist_testset = datasets.MNIST(root="./data", train=False, download=True, transform=mnist_transform)
+    return mnist_trainset, mnist_testset
 
-    mnist_trainset = datasets.MNIST(root="./data", train=True, download=False)
 
+if MAIN:
+    mnist_trainset, mnist_testset = get_mnist()
     img, label = mnist_trainset[1]
-
-    print("Digit: ", label, "\n")
-    display(img.resize((200, 200), Image.Resampling.NEAREST))
+    px.imshow(img.squeeze(), color_continuous_scale="gray", title=f"Label = {label}", width=500).show()
 ```
 """)
-    st_image("img0.png", 150)
+    st.plotly_chart(fig_dict["mnist_image"])
+    # st_image("img0.png", 150)
     st.markdown(r"""
 How well does our untrained model do on this image? Let's find out:
 
 ```python
 if MAIN:
-    img_tensor = mnist_transform(img).unsqueeze(0)
-
-    probs = model(img_tensor).squeeze().softmax(-1).detach()
+    probs = model(img.unsqueeze(0)).squeeze().softmax(-1).detach()
 
     px.bar(
         y=probs, x=range(1, 11), height=400, width=600, template="ggplot2",
@@ -1846,7 +1886,7 @@ if MAIN:
 """)
     st.plotly_chart(fig_dict["mnist_probs_before_training"])
     st.markdown(r"""
-Now, we'll run our training loop on ~2000 images from the training set.
+Now, we'll run our training loop on ~2000 images from the training set. At this point, we won't worry about performing evaluation (that'll be covered in the next section).
 
 ```python
 if MAIN:
@@ -1854,9 +1894,7 @@ if MAIN:
     NUM_SAMPLES = 2000
     NUM_BATCHES = NUM_SAMPLES // BATCH_SIZE
 
-    mnist_trainset.transform = mnist_transform
     mnist_trainloader = DataLoader(mnist_trainset, batch_size=BATCH_SIZE, shuffle=True)
-
     optimizer = t.optim.Adam(model.parameters())
     loss_list = []
 
@@ -1875,9 +1913,10 @@ Let's see how our model improved over time:
 ```python
 if MAIN:
     px.line(
-        loss_list, height=400, width=600, labels={"value": "Loss", "index": "Num batches"}, title="MNIST training curve (cross entropy loss)"
+        y=loss_list, x=range(BATCH_SIZE, NUM_SAMPLES, BATCH_SIZE),
+        labels={"y": "Cross entropy loss", "x": "Num images seen"}, title="MNIST training curve (cross entropy loss)", template="ggplot2"
     ).update_layout(
-        showlegend=False, yaxis_range=[0, max(loss_list)*1.1]
+        showlegend=False, yaxis_range=[0, max(loss_list)*1.1], height=400, width=600, xaxis_range=[0, NUM_SAMPLES]
     ).show()
 ```
 """)
@@ -1887,14 +1926,14 @@ and finally, we can reevaluate our model on the same image we used earlier:
 
 ```python
 if MAIN:
-    probs = model(img_tensor).squeeze().softmax(-1).detach()
+    probs = model(img.unsqueeze(0)).squeeze().softmax(-1).detach()
+
     px.bar(
         y=probs, x=range(1, 11), height=400, width=600, template="ggplot2",
-        title="Classification probabilities", labels={"x": "Digit", "y": "Probability"},
+        title="Classification probabilities", labels={"x": "Digit", "y": "Probability"}, 
     ).update_layout(
         showlegend=False, xaxis_tickmode="linear"
     ).show()
-
 ```
 """)
     st.plotly_chart(fig_dict["mnist_probs_after_training"])

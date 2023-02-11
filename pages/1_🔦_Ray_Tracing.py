@@ -236,7 +236,7 @@ Once we've found values of $u$ and $v$ which satisfy this equation, if any (the 
 
     with st.columns(1)[0]:
         st.markdown(r"""
-#### Exercise - which segments intersect with the rays?
+### Exercise - which segments intersect with the rays?
  
 For each of the following segments, which camera rays from earlier intersect? You can do this by inspection or using `render_lines_with_pyplot`.
 
@@ -263,7 +263,7 @@ if MAIN:
 
     with st.columns(1)[0]:
         st.markdown(r"""
-#### Exercise - implement `intersect_ray_1d`
+### Exercise - implement `intersect_ray_1d`
 
 Using [`torch.lingalg.solve`](https://pytorch.org/docs/stable/generated/torch.linalg.solve.html) and [`torch.stack`](https://pytorch.org/docs/stable/generated/torch.stack.html), implement the `intersect_ray_1d` function to solve the above matrix equation.
 """)
@@ -300,6 +300,8 @@ Is it possible for the solve method to fail? Give a sample input where this woul
 If the ray and segment are exactly parallel, then the solve will fail because there is no solution to the system of equations. For this function, handle this by catching the exception and returning False.
 """)
         st.markdown(r"""
+Remember that your inputs (`ray` and `segment`) are three-dimensional, but we only care about the first 2 dimensions (x and y).
+
 ```python
 def intersect_ray_1d(ray: t.Tensor, segment: t.Tensor) -> bool:
     '''
@@ -463,7 +465,7 @@ Here are a few examples:
     st.markdown("")
     with st.columns(1)[0]:
         st.markdown(r"""
-#### Exercise - implement `intersect_rays_1d`
+### Exercise - implement `intersect_rays_1d`
 
 ```python
 def intersect_rays_1d(
@@ -563,7 +565,7 @@ Now we're going to make use of the z dimension and have rays emitted from the or
 """)
     with st.columns(1)[0]:
         st.markdown(r"""
-#### Exercise - implement `make_rays_2d`
+### Exercise - implement `make_rays_2d`
 
 Implement `make_rays_2d` analogously to `make_rays_1d`. The result should look like a pyramid with the tip at the origin.
 
@@ -727,7 +729,7 @@ We can therefore find the coordinates `s`, `u`, `v` of the intersection point by
 """)
     with st.columns(1)[0]:
         st.markdown(r"""
-#### Exercise - implement `triangle_line_intersects`
+### Exercise - implement `triangle_line_intersects`
 
 Using `torch.linalg.solve` and `torch.stack`, implement `triangle_line_intersects(A, B, C, O, D)`.
 
@@ -824,7 +826,7 @@ Here, `y` was created through basic indexing, so `y` is a view and `y._base` ref
 """)
     with st.columns(1)[0]:
         st.markdown(r"""
-#### Exercise - implement `raytrace_triangle`
+### Exercise - implement `raytrace_triangle`
 
 ```python
 def raytrace_triangle(
@@ -914,7 +916,7 @@ For each ray (pixel) we will return a float representing the minimum distance to
 
     with st.columns(1)[0]:
         st.markdown(r"""
-#### Exercise - implement `raytrace_mesh`
+### Exercise - implement `raytrace_mesh`
 
 Implement `raytrace_mesh` and as before, reshape and visualize the output. Your Pikachu is centered on (0, 0, 0), so you'll want to slide the ray origin back to at least `x=-2` to see it properly.
 

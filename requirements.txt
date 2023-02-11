@@ -33,3 +33,4 @@ diffusers
 torchtyping
 typeguard
 streamlit
+torchinfo

@@ -11,6 +11,7 @@ from torch.utils.data import DataLoader
 from IPython.display import display
 import plotly.express as px
 from PIL import Image
+import functools
 
 import part2_cnns_utils as utils
 import part2_cnns_tests as tests
@@ -152,17 +153,18 @@ test_cases = [
         stride=(12, 4, 2, 1)
     ),
 ]
-for (i, test_case) in enumerate(test_cases):
-    if (test_case.size is None) or (test_case.stride is None):
-        print(f"Test {i} failed: attempt missing.")
-    else:
-        actual = test_input.as_strided(size=test_case.size, stride=test_case.stride)
-        if (test_case.output != actual).any():
-            print(f"Test {i} failed:")
-            print(f"Expected: {test_case.output}")
-            print(f"Actual: {actual}\n")
+if MAIN:
+    for (i, test_case) in enumerate(test_cases):
+        if (test_case.size is None) or (test_case.stride is None):
+            print(f"Test {i} failed: attempt missing.")
         else:
-            print(f"Test {i} passed!\n")
+            actual = test_input.as_strided(size=test_case.size, stride=test_case.stride)
+            if (test_case.output != actual).any():
+                print(f"Test {i} failed:")
+                print(f"Expected: {test_case.output}")
+                print(f"Actual: {actual}\n")
+            else:
+                print(f"Test {i} passed!\n")
 
 
 # %%
@@ -464,7 +466,6 @@ class ReLU(nn.Module):
         return t.maximum(x, t.tensor(0.0))
 
 
-import functools
 class Flatten(nn.Module):
     def __init__(self, start_dim: int = 1, end_dim: int = -1) -> None:
         super().__init__()
@@ -573,11 +574,11 @@ class SimpleCNN(nn.Module):
     def __init__(self):
         super().__init__()
 
-        self.conv = Conv2d(in_channels=1, out_channels=32, kernel_size=3, stride=1, padding=1)
+        self.conv = Conv2d(in_channels=1, out_channels=16, kernel_size=3, stride=1, padding=1)
         self.maxpool = MaxPool2d(kernel_size=2, stride=2, padding=0)
         self.relu = ReLU()
         self.flatten = Flatten()
-        self.fc = Linear(in_features=32*14*14, out_features=10)
+        self.fc = Linear(in_features=16*14*14, out_features=10)
 
     def forward(self, x: t.Tensor) -> t.Tensor:
         return self.fc(self.flatten(self.relu(self.maxpool(self.conv(x)))))
@@ -588,35 +589,38 @@ if MAIN:
 
 # %%
 
-if MAIN:
+def get_mnist():
+    '''Returns MNIST training data'''
     mnist_transform = transforms.Compose([
         transforms.ToTensor(),
         transforms.Normalize((0.1307,), (0.3081,))
     ])
+    mnist_trainset = datasets.MNIST(root="./data", train=True, download=True, transform=mnist_transform)
+    mnist_testset = datasets.MNIST(root="./data", train=False, download=True, transform=mnist_transform)
+    return mnist_trainset, mnist_testset
 
-    mnist_trainset = datasets.MNIST(root="./data", train=True, download=False)
-
+if MAIN:
+    mnist_trainset, mnist_testset = get_mnist()
     img, label = mnist_trainset[1]
-
-    print("Digit: ", label, "\n")
-    display(img.resize((200, 200), Image.Resampling.NEAREST))
+    px.imshow(img.squeeze(), color_continuous_scale="gray", title=f"Label = {label}", width=500).show()
 
 # %%
+
+
+# %%
+
 def write_to_html(fig, filename):
     with open(f"{filename}.html", "w") as f:
         f.write(fig.to_html(full_html=False, include_plotlyjs='cdn'))
 if MAIN:
-    img_tensor = mnist_transform(img).unsqueeze(0)
+    probs = model(img.unsqueeze(0)).squeeze().softmax(-1).detach()
 
-    probs = model(img_tensor).squeeze().softmax(-1).detach()
-
-    fig = px.bar(
+    px.bar(
         y=probs, x=range(1, 11), height=400, width=600, template="ggplot2",
         title="Classification probabilities", labels={"x": "Digit", "y": "Probability"}, text_auto='.2f'
     ).update_layout(
         showlegend=False, xaxis_tickmode="linear"
     ).show()
-    
 
 # %%
 
@@ -625,9 +629,7 @@ if MAIN:
     NUM_SAMPLES = 2000
     NUM_BATCHES = NUM_SAMPLES // BATCH_SIZE
 
-    mnist_trainset.transform = mnist_transform
     mnist_trainloader = DataLoader(mnist_trainset, batch_size=BATCH_SIZE, shuffle=True)
-
     optimizer = t.optim.Adam(model.parameters())
     loss_list = []
 
@@ -640,24 +642,23 @@ if MAIN:
         loss_list.append(loss.item())
         print(f"Batches seen = {i+1:02}/{NUM_BATCHES}, Loss = {loss:.3f}")
 
-    fig = px.line(
-        loss_list, height=400, width=600, labels={"value": "Cross entropy loss", "index": "Num batches"}, title="MNIST training curve"
+    px.line(
+        y=loss_list, x=range(BATCH_SIZE, NUM_SAMPLES, BATCH_SIZE),
+        labels={"y": "Cross entropy loss", "x": "Num images seen"}, title="MNIST training curve (cross entropy loss)", template="ggplot2"
     ).update_layout(
-        showlegend=False, yaxis_range=[0, max(loss_list)*1.1]
-    )#.show()
-    write_to_html(fig, "loss_curve")
+        showlegend=False, yaxis_range=[0, max(loss_list)*1.1], height=400, width=600, xaxis_range=[0, NUM_SAMPLES]
+    ).show()
 
 # %%
 
 if MAIN:
-    probs = model(img_tensor).squeeze().softmax(-1).detach()
+    probs = model(img.unsqueeze(0)).squeeze().softmax(-1).detach()
 
-    fig = px.bar(
+    px.bar(
         y=probs, x=range(1, 11), height=400, width=600, template="ggplot2",
         title="Classification probabilities", labels={"x": "Digit", "y": "Probability"},
     ).update_layout(
         showlegend=False, xaxis_tickmode="linear"
-    ) #.show()
-    write_to_html(fig, "mnist_probs_after_training")
+    ).show()
 
 # %%

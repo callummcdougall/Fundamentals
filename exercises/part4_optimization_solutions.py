@@ -1,6 +1,42 @@
+# %%
+
 import torch as t
-from torch import optim
-from typing import Callable, Iterable
+from torch import nn, optim
+from torchvision import datasets, transforms
+from torch.utils.data import DataLoader, Subset
+from fancy_einsum import einsum
+from typing import Union, Optional, Callable, Iterable, Tuple
+import numpy as np
+from einops import rearrange
+from tqdm import tqdm
+import plotly.express as px
+import plotly.graph_objs as go
+from plotly.subplots import make_subplots
+from dataclasses import dataclass
+import time
+import wandb
+
+import part4_optimization_utils as utils
+import part4_optimization_tests as tests
+
+from part3_resnets_solutions import ResNet34
+
+device = t.device("cuda" if t.cuda.is_available() else "cpu")
+
+MAIN = __name__ == "__main__"
+
+# %%
+
+def rosenbrocks_banana(x: t.Tensor, y: t.Tensor, a=1, b=100) -> t.Tensor:
+    return (a - x) ** 2 + b * (y - x**2) ** 2 + 1
+
+
+if MAIN:
+    x_range = [-2, 2]
+    y_range = [-1, 3]
+    fig = utils.plot_fn(rosenbrocks_banana, x_range, y_range, log_scale=True)
+
+# %%
 
 def opt_fn_with_sgd(fn: Callable, xy: t.Tensor, lr=0.001, momentum=0.98, n_iters: int = 100):
     '''
@@ -23,7 +59,18 @@ def opt_fn_with_sgd(fn: Callable, xy: t.Tensor, lr=0.001, momentum=0.98, n_iters
         out.backward()
         optimizer.step()
         optimizer.zero_grad()
+
     return xys
+
+
+if MAIN:
+    xy = t.tensor([-1.5, 2.5], requires_grad=True)
+    x_range = [-2, 2]
+    y_range = [-1, 3]
+
+    fig = utils.plot_optimization_sgd(opt_fn_with_sgd, rosenbrocks_banana, xy, x_range, y_range, lr=0.001, momentum=0.98, show_min=True)
+
+    fig.show()
 
 # %%
 
@@ -71,6 +118,11 @@ class SGD:
     def __repr__(self) -> str:
         return f"SGD(lr={self.lr}, momentum={self.mu}, weight_decay={self.lmda})"
 
+
+if MAIN:
+    tests.test_sgd(SGD)
+
+# %%
 
 class RMSprop:
     def __init__(
@@ -122,13 +174,17 @@ class RMSprop:
     def __repr__(self) -> str:
         return f"RMSprop(lr={self.lr}, eps={self.eps}, momentum={self.mu}, weight_decay={self.lmda}, alpha={self.alpha})"
 
+if MAIN:
+    tests.test_rmsprop(RMSprop)
+
+# %%
 
 class Adam:
     def __init__(
         self,
         params: Iterable[t.nn.parameter.Parameter],
         lr: float = 0.001,
-        betas: tuple[float, float] = (0.9, 0.999),
+        betas: Tuple[float, float] = (0.9, 0.999),
         eps: float = 1e-08,
         weight_decay: float = 0.0,
     ):
@@ -170,8 +226,11 @@ class Adam:
 
     def __repr__(self) -> str:
         return f"Adam(lr={self.lr}, beta1={self.beta1}, beta2={self.beta2}, eps={self.eps}, weight_decay={self.lmda})"
-    
 
+if MAIN:
+    tests.test_adam(Adam)
+
+# %%
 
 def opt_fn(fn: Callable, xy: t.Tensor, optimizer_class, optimizer_kwargs: dict, n_iters: int = 100):
     '''Optimize the a given function starting from the specified point.
@@ -190,9 +249,28 @@ def opt_fn(fn: Callable, xy: t.Tensor, optimizer_class, optimizer_kwargs: dict, 
         out.backward()
         optimizer.step()
         optimizer.zero_grad()
+    
     return xys
 
 # Implementation of SGD which works with parameter groups
+
+# %%
+
+if MAIN:
+    xy = t.tensor([-1.5, 2.5], requires_grad=True)
+    x_range = [-2, 2]
+    y_range = [-1, 3]
+    optimizers = [
+        (SGD, dict(lr=1e-3, momentum=0.98)),
+        (SGD, dict(lr=5e-4, momentum=0.98)),
+        (Adam, dict(lr=0.15, betas=(0.85, 0.85))),
+    ]
+
+    fig = utils.plot_optimization(opt_fn, rosenbrocks_banana, xy, optimizers, x_range, y_range, show_min=True)
+
+    fig.show()
+
+# %%
 
 class SGD:
 
@@ -258,3 +336,185 @@ class SGD:
                 # Update g
                 self.param_groups[i]["gs"][j] = new_g
         self.t += 1
+
+if MAIN:
+    tests.test_sgd_param_groups(SGD)
+
+# %%
+
+if MAIN:
+    cifar_mean = [0.485, 0.456, 0.406]
+    cifar_std = [0.229, 0.224, 0.225]
+
+    cifar_transform = transforms.Compose([
+        transforms.ToTensor(),
+        transforms.Normalize(mean=cifar_mean, std=cifar_std)
+    ])
+
+    cifar_trainset = datasets.CIFAR10(root='./data', train=True, download=True, transform=cifar_transform)
+    cifar_testset = datasets.CIFAR10(root='./data', train=False, download=True, transform=cifar_transform)
+
+    utils.show_cifar_images(cifar_trainset, rows=3, cols=5)
+
+# %%
+
+@dataclass
+class ResNetTrainingArgs():
+    trainset: datasets.VisionDataset
+    testset: datasets.VisionDataset
+    epochs: int = 3
+    batch_size: int = 512
+    loss_fn: Callable[..., t.Tensor] = nn.CrossEntropyLoss()
+    optimizer: Callable[..., t.optim.Optimizer] = t.optim.Adam
+    optimizer_args: Tuple = ()
+    device: str = "cuda" if t.cuda.is_available() else "cpu"
+    filename_save_model: str = "models/part4_resnet.pt"
+    subset: int = 1
+
+def train_resnet(args: ResNetTrainingArgs) -> Tuple[list, list]:
+    '''
+    Defines and trains a ResNet.
+
+    This is a pretty standard training function, containing a test set for evaluations, plus a progress bar.
+    '''
+
+    trainset = args.trainset if (args.subset == 1) else Subset(args.trainset, range(0, len(args.trainset), args.subset))
+    testset = args.testset if (args.subset == 1) else Subset(args.testset, range(0, len(args.testset), args.subset))
+    trainloader = DataLoader(trainset, batch_size=args.batch_size, shuffle=True)
+    testloader = DataLoader(testset, batch_size=args.batch_size, shuffle=True)
+
+    model = ResNet34().to(args.device).train()
+    optimizer = args.optimizer(model.parameters(), *args.optimizer_args)
+
+    loss_list = []
+    accuracy_list = []
+
+    for epoch in range(args.epochs):
+
+        progress_bar = tqdm(trainloader)
+        for (imgs, labels) in progress_bar:
+
+            imgs = imgs.to(args.device)
+            labels = labels.to(args.device)
+
+            probs = model(imgs)
+            loss = args.loss_fn(probs, labels)
+            loss.backward()
+            optimizer.step()
+            optimizer.zero_grad()
+
+            progress_bar.set_description(f"Epoch {epoch+1}/{args.epochs}, Loss = {loss:.3f}")
+            
+            loss_list.append(loss.item())
+
+        with t.inference_mode():
+
+            accuracy = 0
+            total = 0
+
+            for (imgs, labels) in testloader:
+
+                imgs = imgs.to(args.device)
+                labels = labels.to(args.device)
+
+                probs = model(imgs)
+                predictions = probs.argmax(-1)
+                accuracy += (predictions == labels).sum().item()
+                total += imgs.size(0)
+
+            accuracy_list.append(accuracy / total)
+
+        print(f"Train loss = {loss:.6f}, Accuracy = {accuracy}/{total}")
+    
+    print(f"\nSaving model to: {args.filename_save_model}")
+    t.save(model, args.filename_save_model)
+    return loss_list, accuracy_list
+
+
+if MAIN:
+    args = ResNetTrainingArgs(cifar_trainset, cifar_testset, subset=5)
+    loss_list, accuracy_list = train_resnet(args)
+
+    px.line(
+        y=loss_list, x=range(0, len(loss_list)*args.batch_size, args.batch_size),
+        title="Training loss for CNN, on MNIST data",
+        labels={"x": "Num images seen", "y": "Cross entropy loss"}, template="seaborn"
+    ).show()
+    px.line(
+        y=accuracy_list, x=range(1, len(accuracy_list)+1),
+        title="Training accuracy for CNN, on MNIST data",
+        labels={"x": "Epoch", "y": "Accuracy"}, template="ggplot2"
+    ).show()
+
+# %%
+
+def train_resnet(args: ResNetTrainingArgs) -> None:
+    '''
+    Defines and trains a ResNet.
+
+    This is a pretty standard training function, containing weights and biases logging, a test set for evaluations, plus a progress bar.
+    '''
+
+    start_time = time.time()
+    examples_seen = 0
+
+    config_dict = args.__dict__
+    wandb.init(project="part4_model_resnet", config=config_dict)
+
+    trainset = args.trainset if (args.subset == 1) else Subset(args.trainset, range(0, len(args.trainset), args.subset))
+    testset = args.testset if (args.subset == 1) else Subset(args.testset, range(0, len(args.testset), args.subset))
+    trainloader = DataLoader(trainset, batch_size=args.batch_size, shuffle=True)
+    testloader = DataLoader(testset, batch_size=args.batch_size, shuffle=True)
+
+    model = ResNet34().to(args.device).train()
+    optimizer = args.optimizer(model.parameters(), *args.optimizer_args)
+
+    wandb.watch(model, criterion=args.loss_fn, log="all", log_freq=10, log_graph=True)
+
+    for epoch in range(args.epochs):
+
+        progress_bar = tqdm(trainloader)
+        for (imgs, labels) in progress_bar:
+
+            imgs = imgs.to(args.device)
+            labels = labels.to(args.device)
+
+            probs = model(imgs)
+            loss = args.loss_fn(probs, labels)
+            loss.backward()
+            optimizer.step()
+            optimizer.zero_grad()
+
+            progress_bar.set_description(f"Epoch {epoch+1}/{args.epochs}, Loss = {loss:.3f}")
+            
+            examples_seen += imgs.size(0)
+            wandb.log({"train_loss": loss, "elapsed": time.time() - start_time}, step=examples_seen)
+
+        with t.inference_mode():
+
+            accuracy = 0
+            total = 0
+
+            for (imgs, labels) in testloader:
+
+                imgs = imgs.to(args.device)
+                labels = labels.to(args.device)
+
+                probs = model(imgs)
+                predictions = probs.argmax(-1)
+                accuracy += (predictions == labels).sum().item()
+                total += imgs.size(0)
+
+            wandb.log({"test_accuracy": accuracy/total}, step=examples_seen)
+
+    filename = f"{wandb.run.dir}/model_state_dict.pt"
+    print(f"Saving model to: {filename}")
+    t.save(model.state_dict(), filename)
+    wandb.save(filename)
+    wandb.finish()
+
+
+if MAIN:
+    args = ResNetTrainingArgs(cifar_trainset, cifar_testset)
+    train_resnet(args)
+# %%

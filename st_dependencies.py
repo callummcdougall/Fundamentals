@@ -26,8 +26,12 @@ def styling():
     st.set_page_config(layout="wide", page_icon="🔬")
     st.markdown("""
 <style>
-div[data-testid="column"] {
+.css-fg4pbf div[data-testid="column"] {
     background-color: #f9f5ff;
+    padding: 15px;
+}
+.css-ffhzg2 div[data-testid="column"] {
+    background-color: rgba(140, 0, 140, 0.15);
     padding: 15px;
 }
 .stAlert h4 {

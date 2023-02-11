@@ -62,7 +62,7 @@ def section_cnn():
 import torch as t
 import torchvision
 from torchvision import datasets, transforms
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, Subset
 from dataclasses import dataclass
 import PIL
 from PIL import Image
@@ -72,9 +72,6 @@ import plotly.graph_objects as go
 import plotly.express as px
 from plotly.subplots import make_subplots
 from tqdm import tqdm
-from torchvision import datasets, transforms
-from torch.utils.data import DataLoader, Subset
-from PIL import Image
 from IPython.display import display
 
 import part3_resnets_utils as utils
@@ -174,8 +171,23 @@ class ConvNet(nn.Module):
         return x
 ```
 """)
+        st.markdown(r"""
+We can also use the useful library `torchinfo` to print out a much more informative description of our model. You can use this function in two ways:
 
-    st.markdown(r"""## Transforms
+1. Specify `input_size` (remember the batch dimension!), and optionally `dtypes` (this defaults to float).
+2. Specify a sample input tensor, via the argument `input_data`.
+
+Below is an example of the first one:
+
+```python
+if MAIN:
+    summary = torchinfo.summary(model, input_size=(1, 1, 28, 28))
+    print(summary)
+```
+""")
+
+    st.markdown(r"""
+## Transforms
 
 Before we use this model to make any predictions, we first need to think about our input data. Below is a block of code to fetch and process MNIST data. We will go through it line by line.
 
@@ -184,59 +196,64 @@ Before we use this model to make any predictions, we first need to think about o
 from torchvision import datasets, transforms
 from torch.utils.data import DataLoader
 
-if MAIN:
+def get_mnist(subset: int = 10):
+    '''Returns MNIST training data, sampled by the frequency given in `subset`.'''
     mnist_transform = transforms.Compose([
         transforms.ToTensor(),
         transforms.Normalize((0.1307,), (0.3081,))
     ])
+    mnist_trainset = datasets.MNIST(root="./data", train=True, download=True, transform=mnist_transform)
+    mnist_testset = datasets.MNIST(root="./data", train=False, download=True, transform=mnist_transform)
 
-    mnist_trainset = datasets.MNIST(root="./data", train=True, transform=mnist_transform, download=True)
+    if subset > 1:
+        mnist_trainset = Subset(mnist_trainset, indices=range(0, len(mnist_trainset), subset))
+        mnist_testset = Subset(mnist_testset, indices=range(0, len(mnist_testset), subset))
+
+    return mnist_trainset, mnist_testset
+
+if MAIN:
+    mnist_trainset, mnist_testset = get_mnist()
     mnist_trainloader = DataLoader(mnist_trainset, batch_size=64, shuffle=True)
+    mnist_testloader = DataLoader(mnist_testset, batch_size=64, shuffle=True)
 ```
 
 The `torchvision` package consists of popular datasets, model architectures, and common image transformations for computer vision. `transforms` is a library from `torchvision` which provides access to a suite of functions for preprocessing data. The three functions used here are:
 
-1. `transforms.Compose`, for stringing together multiple transforms into a sequence
-2. `transforms.ToTensor`, for converting a PIL image or numpy array into a tensor
-    * In this case, our data are initially stored as PIL images (you can check this by inspecting the contents of `trainset` when you omit the `transform` argument)
-3. `transforms.Normalize`, for applying linear transformations to an image
-    * Here, we're subtracting 0.1307 and dividing by 0.3081 for each image
+1. `transforms.Compose`, for stringing together multiple transforms into a sequence.
+2. `transforms.ToTensor`, for converting a PIL image or numpy array into a tensor. In this case, our data are initially stored as PIL images (you can check this by inspecting the contents of `mnist_trainset` when you omit the `transform` argument).
+3. `transforms.Normalize`, for applying linear transformations to an image. Here, we're subtracting 0.1307 and dividing by 0.3081 for each image.
 
 Note that each transform is applied individually, to each element in the dataset. Other kinds of transforms include `RandomCrop` for cropping to a certain size at random positions, `GaussianBlur` for blurring an image, and even `Lambda` which allows the users to convert their own functions into torchvision transform objects.
 
-Another thing to note - these transforms are specifically for the input images, not the labels. To apply a transform to the labels, you can use the argument `target_transform` inside `datasets.MNIST` (this works in exactly the same way). 
-
 ---
 
-Next, we define a `trainset`. We use `datasets.MNIST` to get our data (further details of this database can be found [here](http://yann.lecun.com/exdb/mnist/)). The argument `root="./data"` indicates that we're storing our data in the `./data` directory, and `transform=transform` tells us that we should apply our previously defined `transform` to each element in our data.
+Next, we define `mnist_trainset`. We use `datasets.MNIST` to get our data (further details of this database can be found [here](http://yann.lecun.com/exdb/mnist/)). The argument `root="./data"` indicates that we're storing our data in the `./data` directory, and `transform=transform` tells us that we should apply our previously defined `transform` to each element in our data.
 
-The first time you run this, it might take some time (you should see progress bars show up).
+Print `dir(mnist_trainset)` to see all the attributes of your dataset. Not all datasets have exactly the same attributes, but there will usually be some common ones. In this example, you should try running the following to see what they do:
 
-You can inspect the contents of `trainset`. Some important attributes to know:
+* `mnist_trainset.data`
+* `mnist_trainset.targets`
+* `mnist_trainset.classes`
+* `mnist_trainset[0]` (i.e. just indexing the dataset)
 
-* `trainset.data` gives you access to all the input data, as one large tensor (where the 0th dimension is the batch dimension). For instance, `trainset.data[0]` will return a 28x28 array representing a monochrome image of a single digit.
-    * You can use the `display_array_as_img` to get an idea of what your images look like (although you might have to use `einops.repeat` to display your image a bit bigger!)
-* `trainset.targets` returns a 1D array, where each element is the label of the corresponding input image.
-* `trainset.classes` returns a list matching up labels to class names. This will be pretty trivial in this case, but it's more useful when you're dealing with e.g. imagenet data.
-* Just indexing `trainset`, i.e. `trainset[0]`, returns a 2-tuple containing a single input image and label.
-    * This means you can iterate through a trainset using `for (X, y) in trainset:`. However, this is not the best way to iterate through data, as we'll see below.
+The `Sample` function allows us to take a sample of a dataset (useful when our training loops are taking a very long time!). The argument `indices` is a list of indices to sample from the dataset. For example, `Sample(mnist_trainset, indices=[0, 1, 2])` will return a dataset containing only the first three elements of `mnist_trainset`.
 
 ---
 
 Finally, `DataLoader` provides a useful abstraction to work with a dataset. It takes in a dataset, and a few arguments including `batch_size` (how many inputs to feed through the model on which to compute the loss before each step of gradient descent) and `shuffle` (whether to randomise the order each time you iterate). The object that it returns can be iterated through as follows:
 
 ```python
-for X_batch, y_batch in trainloader:
+for X_batch, y_batch in mnist_trainloader:
     ...
 ```
 
-where `X_batch` is a 3D array of shape `(batch_size, 28, 28)` where each slice is an image, and `y_batch` is a 1D tensor of labels of length `batch_size`. This is much faster than what we'd be forced to do with `trainset`:
+where `X_batch` is a 3D array of shape `(batch_size, 28, 28)` where each slice is an image, and `y_batch` is a 1D tensor of labels of length `batch_size`. This is much faster than what we'd be forced to do with `mnist_trainset`:
 
 ```python
-for i in range(len(trainset) // batch_size):
+for i in range(len(mnist_trainset) // batch_size):
     
-    X_batch = trainset.data[i*batch_size: (i+1)*batch_size]
-    y_batch = trainset.targets[i*batch_size: (i+1)*batch_size]
+    X_batch = mnist_trainset.data[i*batch_size: (i+1)*batch_size]
+    y_batch = mnist_trainset.targets[i*batch_size: (i+1)*batch_size]
 
     ...
 ```
@@ -245,22 +262,21 @@ A note about batch size - it's common to see batch sizes which are powers of two
 
 ---
 
-You should play around with the objects defined above (i.e. `trainset` and `trainloader`) until you have a good feel for how they work. You should also answer the questions below before proceeding.
+You should play around with the objects defined above (i.e. `mnist_trainset` and `mnist_trainloader`) until you have a good feel for how they work. You should also answer the questions below before proceeding.
 """)
 
     with st.expander("Question - can you explain why we include a data normalization function in torchvision.transforms?"):
         st.markdown(r"""One consequence of unnormalized data is that you might find yourself stuck in a very flat region of the domain, and gradient descent may take much longer to converge.""")
     
-    st.info(r"""Normalization isn't strictly necessary for this reason, because any rescaling of an input vector can be effectively undone by the network learning different weights and biases. But in practice, it does usually help speed up convergence.""")
+        st.info(r"""Normalization isn't strictly necessary for this reason, because any rescaling of an input vector can be effectively undone by the network learning different weights and biases. But in practice, it does usually help speed up convergence.""")
 
-    st.markdown(r"""Normalization also helps avoid numerical issues.""")
+        st.markdown(r"""Normalization also helps avoid numerical issues.""")
 
     with st.expander(r"""Question - can you explain why we use these exact values to normalize with?"""):
         st.markdown(r"""These values were calculated across the MNIST dataset, so that they would have approximately mean 0 and variance 1.""")
 
     with st.expander(r"""Question - if the dataset was of full-color images, what would the shape of trainset.data be? How about trainset.targets?"""):
-        st.markdown(r"""`trainset.data` would have shape `(dataset_size, channels, height, width)` where `channels=3` represents the RGB channels. `trainset.targets` would still just be a 1D array.
-""")
+        st.markdown(r"""`trainset.data` would have shape `(dataset_size, channels, height, width)` where `channels=3` represents the RGB channels. `trainset.targets` would still just be a 1D array.""")
 
     with st.expander(r"""Question - what is the benefit of using shuffle=True? i.e. what might the problem be if we didn't do this?"""):
         st.markdown(r"""Shuffling is done during the training to make sure we aren't exposing our model to the same cycle (order) of data in every epoch. It is basically done to ensure the model isn't adapting its learning to any kind of spurious pattern.""")
@@ -272,25 +288,25 @@ You might have seen some blue progress bars running when you first downloaded yo
 You can run the cell below to see how these progress bars are used (note that you might need to install the `tqdm` library first).
 
 ```python
-from tqdm.notebook import tqdm_notebook
+from tqdm import tqdm
 import time
 
-for i in tqdm_notebook(range(100)):
+for i in tqdm(range(100)):
     time.sleep(0.01)
 ```
 
 `tqdm` wraps around a list, range or other iterable, but other than that it doesn't affect the structure of your loop. You can also run multiple nested progress bars, if you add the argument `leave=False` in the inner progress bar:
 
 ```python
-for j in tqdm_notebook(range(5)):
-    for i in tqdm_notebook(range(100), leave=False):
+for j in tqdm(range(5)):
+    for i in tqdm(range(100), leave=False):
         time.sleep(0.01)
 ```
 
 You can also update the description of a progress bar, e.g. to print out the loss in the middle of a training loop. This can be a very handy way to see if the model is actually improving, and how quickly. A template for how you might do this during training:
 
 ```python
-progress_bar = tqdm_notebook(dataloader)
+progress_bar = tqdm(dataloader)
 for (x, y) in dataloader:
     # calculate training loss
     progress_bar.set_description(f"Training loss = {loss}")
@@ -299,17 +315,11 @@ for (x, y) in dataloader:
 One gotcha when it comes to `tqdm` - if you use it to wrap around an object with no well-defined length (e.g. an enumerator), it won't know what the progress bar total is. For instance, you can run this cell to verify it won't work as intended:
 
 ```python
-for i in tqdm_notebook(enumerate(range(100))):
+for i in tqdm(enumerate(range(100))):
     time.sleep(0.01)
 ```
 
-You can fix this by putting the `enumerate` outside of the `tqdm_notebook` function, or by adding the argument `total=100` (this tells `tqdm_notebook` exactly how many objects there are to iterate through).
-""")
-
-    st.info(r"""
-Note - `tqdm_notebook` might not work in your environment, and you just get empty output. In that case, try installing (and possibly) downgrading the `ipywidgets` library: `ipywidgets>=7.0,<8.0`. 
-
-If this still doesn't work, then instead of `tqdm.notebook.tqdm_notebook` try using `tqdm.auto.tqdm`. This function works in exactly the same way, with all the same arguments.
+You can fix this by putting the `enumerate` outside of the `tqdm` function, or by adding the argument `total=100` (this tells `tqdm` exactly how many objects there are to iterate through).
 """)
 
     st.markdown(r"""
@@ -321,7 +331,7 @@ One last thing to discuss before we move onto training our model: **GPUs**. We'l
 * Note that `to` is never inplace for tensors (i.e. you have to call `x = x.to(device)`), but when working with models, calling `model = model.to(device)` or `model.to(device` are both perfectly valid.
 
 ```python
-device = t.device('cuda:0' if t.cuda.is_available() else 'cpu')
+device = t.device('cuda' if t.cuda.is_available() else 'cpu')
 
 # Assuming that we are on a CUDA machine, this should print a CUDA device:
 print(device)
@@ -334,38 +344,42 @@ Finally, we'll now build our training loop. The one below is actually constructe
 ```python
 @dataclass
 class ConvNetTrainingArgs():
+    trainset: datasets.VisionDataset
+    testset: datasets.VisionDataset
     epochs: int = 3
     batch_size: int = 512
-    loss_fn: Callable = nn.CrossEntropyLoss()
+    loss_fn: Callable[..., t.Tensor] = nn.CrossEntropyLoss()
+    optimizer: Callable[..., t.optim.Optimizer] = t.optim.Adam
+    optimizer_args: Tuple = ()
     device: str = "cuda" if t.cuda.is_available() else "cpu"
-    filename_save_model: str = "./part2_cnn_model.pt"
+    filename_save_model: str = "models/part3_convnet.pt"
 
 
-def train_convnet(args: ConvNetTrainingArgs):
+def train_convnet(args: ConvNetTrainingArgs) -> list:
     '''
     Defines a ConvNet using our previous code, and trains it on the data in trainloader.
     
     Returns loss_list, the list of cross entropy losses computed on each batch.
     '''
-    trainloader = DataLoader(mnist_trainset, batch_size=args.batch_size, shuffle=True)
+    trainloader = DataLoader(args.trainset, batch_size=args.batch_size, shuffle=True)
 
     model = ConvNet().to(args.device).train()
-    optimizer = t.optim.Adam(model.parameters())
+    optimizer = args.optimizer(model.parameters(), *args.optimizer_args)
     loss_list = []
     
     for epoch in range(args.epochs):
 
         progress_bar = tqdm(trainloader)
-        for (x, y) in progress_bar:
+        for (imgs, labels) in progress_bar:
             
-            x = x.to(args.device)
-            y = y.to(args.device)
+            imgs = imgs.to(args.device)
+            labels = labels.to(args.device)
             
-            optimizer.zero_grad()
-            y_hat = model(x)
-            loss = args.loss_fn(y_hat, y)
+            probs = model(imgs)
+            loss = args.loss_fn(probs, labels)
             loss.backward()
             optimizer.step()
+            optimizer.zero_grad()
             
             loss_list.append(loss.item())
 
@@ -377,7 +391,7 @@ def train_convnet(args: ConvNetTrainingArgs):
 
 
 if MAIN:
-    args = ConvNetTrainingArgs()
+    args = ConvNetTrainingArgs(mnist_trainset, mnist_testset)
     loss_list = train_convnet(args)
 
     px.line(
@@ -386,8 +400,11 @@ if MAIN:
         labels={"x": "Batch number", "y": "Cross entropy loss"}
     ).show()
 ```
-""")
-    st.markdown(r"""
+
+You should find the results to be a great deal better than the results we got from the previous exercise (with much less data, and a much smaller model).
+
+---
+
 We've seen most of these components before over the last few days. The most important lines to go over are these five:
 
 ```python
@@ -414,7 +431,7 @@ An explanation of these five lines:
 Using dataclasses for creating or training models is a very useful way to keep your code clean. Dataclasses are a special kind of class which come with built-in methods for initialising and printing (i.e. no need to define an `__init__` or `__repr__`). You can set specific arguments as follows:
 
 ```python
-args = ConvNetTrainingArgs(epochs=10, batch_size=256)
+args = ConvNetTrainingArgs(mnist_trainset, mnist_testset, epochs=10, batch_size=256)
 print(args)
 ```
 
@@ -424,21 +441,19 @@ Using dataclasses, saves code, and keeps all your arguments in one easy-to-track
 
 * The `train()` method used when defining models changes the behaviour of certain types of layers, e.g. batch norm and dropout. We don't have either of these types of layers present in our model, but we'll need to use this later today when we work with ResNets.
 * We used `torch.optim.Adam` as an optimiser. We'll discuss optimisers in more detail in the next set of exercises, but for now it's enough to know that Adam is a gradient descent optimisation algorithm which empirically performs much better than simpler algorithms like SGD (stochastic gradient descent).
-* The `.item()` method can be used on one-element tensors, and returns their value as a standard Python number.
+* The `.item()` method can be used on one-element tensors, and returns their value as a standard Python int / float.
 * The `torch.save` function takes in a model and a filename, and saves that model (including the values of all its parameters). Common filename extensions for PyTorch models are `.pt` and `.pth`.
 """)
     with st.columns(1)[0]:
         st.markdown(r"""
-#### Exercise - add a testing loop
+### Exercise - add a testing loop
 
 Edit the `train_convnet` function so that, at the end of each epoch, it returns the accuracy of your model on a test set.
-
-*(Note - you can define `mnist_testset` and `mnist_trainset` in a similar way as for your training data, with the added argument `train=False` when defining `mnist_testset`; this means you get a different set of inputs.)*
 
 Below, we've also included a function which plots the loss and test set accuracy on the same graph, just to help you verify that your function is behaving as expected.
 
 ```python
-def train_convnet(trainloader: DataLoader, testloader: DataLoader, epochs: int, loss_fn: Callable) -> list:
+def train_convnet(args: ConvNetTrainingArgs) -> Tuple[list, list]:
     '''
     Defines a ConvNet using our previous code, and trains it on the data in trainloader.
     
@@ -446,20 +461,20 @@ def train_convnet(trainloader: DataLoader, testloader: DataLoader, epochs: int, 
     '''
     pass
 
+
 if MAIN:
-    args = ConvNetTrainingArgs()
+    args = ConvNetTrainingArgs(mnist_trainset, mnist_testset)
     loss_list, accuracy_list = train_convnet(args)
 
     px.line(
-        y=loss_list, 
+        y=loss_list, x=range(0, len(loss_list)*args.batch_size, args.batch_size),
         title="Training loss for CNN, on MNIST data",
-        labels={"x": "Batch number", "y": "Cross entropy loss"}
+        labels={"x": "Num images seen", "y": "Cross entropy loss"}, template="seaborn"
     ).show()
     px.line(
-        y=accuracy_list, x=range(1, 4),
+        y=accuracy_list, x=range(1, len(accuracy_list)+1),
         title="Training accuracy for CNN, on MNIST data",
-        labels={"x": "Epoch", "y": "Accuracy"},
-        template="ggplot2"
+        labels={"x": "Epoch", "y": "Accuracy"}, template="ggplot2"
     ).show()
 ```
 """)
@@ -476,35 +491,31 @@ Recall that your model's outputs are a tensor of shape `(batch_size, 10 = num_cl
         with st.expander("Example solution"):
             st.markdown(r"""
 ```python
-if MAIN:
-    mnist_testset = datasets.MNIST(root="./data", train=False, transform=mnist_transform, download=True)
-
-
-def train_convnet(args: ConvNetTrainingArgs):
+def train_convnet(args: ConvNetTrainingArgs) -> Tuple[list, list]:
     '''
     Defines a ConvNet using our previous code, and trains it on the data in trainloader.
     
     Returns tuple of (loss_list, accuracy_list), where accuracy_list contains the fraction of accurate classifications on the test set, at the end of each epoch.
     '''
 
-    trainloader = DataLoader(mnist_trainset, batch_size=args.batch_size, shuffle=True)
-    testloader = DataLoader(mnist_testset, batch_size=args.batch_size, shuffle=True)
+    trainloader = DataLoader(args.trainset, batch_size=args.batch_size, shuffle=True)
+    testloader = DataLoader(args.testset, batch_size=args.batch_size, shuffle=True)
 
     model = ConvNet().to(args.device).train()
-    optimizer = t.optim.Adam(model.parameters())
+    optimizer = args.optimizer(model.parameters(), *args.optimizer_args)
     loss_list = []
     accuracy_list = []
     
     for epoch in range(args.epochs):
 
         progress_bar = tqdm(trainloader)
-        for (x, y) in progress_bar:
+        for (imgs, labels) in progress_bar:
             
-            x = x.to(args.device)
-            y = y.to(args.device)
+            imgs = imgs.to(args.device)
+            labels = labels.to(args.device)
             
-            y_hat = model(x)
-            loss = args.loss_fn(y_hat, y)
+            probs = model(imgs)
+            loss = args.loss_fn(probs, labels)
             loss.backward()
             optimizer.step()
             optimizer.zero_grad()
@@ -518,15 +529,15 @@ def train_convnet(args: ConvNetTrainingArgs):
             accuracy = 0
             total = 0
             
-            for (x, y) in testloader:
+            for (imgs, labels) in testloader:
 
-                x = x.to(args.device)
-                y = y.to(args.device)
+                imgs = imgs.to(args.device)
+                labels = labels.to(args.device)
 
-                y_hat = model(x)
-                y_predictions = y_hat.argmax(-1)
-                accuracy += (y_predictions == y).sum().item()
-                total += y.size(0)
+                probs = model(imgs)
+                predictions = probs.argmax(-1)
+                accuracy += (predictions == labels).sum().item()
+                total += imgs.size(0)
 
             accuracy_list.append(accuracy/total)
             
@@ -545,14 +556,14 @@ def section_resnet():
 <ul class="contents">
     <li><a class="contents-el" href="#some-final-modules">Some final modules</a></li>
     <li><ul class="contents">
-        <li><a class="contents-el" href="#nn-sequential"><code>nn.Sequential</code></a></li>
-        <li><a class="contents-el" href="#nn-batchnorm2d"><code>nn.BatchNorm2d</code></a></li>
+        <li><a class="contents-el" href="#nn-sequential">Sequential</a></li>
+        <li><a class="contents-el" href="#nn-batchnorm2d">BatchNorm2d</a></li>
         <li><ul class="contents">
             <li><a class="contents-el" href="#train-and-eval-modes">Train and Eval Modes</a></li>
         </li></ul>
-        <li><a class="contents-el" href="#nn-averagepool"><code>nn.AveragePool</code></a></li>
+        <li><a class="contents-el" href="#nn-averagepool">AveragePool</a></li>
     </li></ul>
-    <li><a class="contents-el" href="#building-resnet">Building <code>ResNet</code></a></li>
+    <li><a class="contents-el" href="#building-resnet">Building ResNet</a></li>
     <li><ul class="contents">
         <li><a class="contents-el" href="#residual-block">Residual Block</a></li>
         <li><a class="contents-el" href="#blockgroup">BlockGroup</a></li>
@@ -599,7 +610,7 @@ Crucially, both the addition and concatenation methods have the property of pres
 
 We'll start by defining a few more `nn.Module` objects, which we hadn't needed before.
 
-### `nn.Sequential`
+### Sequential
 
 Firstly, now that we're working with large and complex architectures, we should create a version of `nn.Sequential`. Recall that we briefly came across `nn.Sequential` at the end of the first day, when building our (extremely simple) neural network. As the name suggests, when an `nn.Sequential` is fed an input, it sequentially applies each of its submodules to the input, with the output from one module feeding into the next one.
 
@@ -627,7 +638,7 @@ class Sequential(nn.Module):
         return x
 ```
 
-### `nn.BatchNorm2d`
+### BatchNorm2d
 
 Now, we'll implement our `BatchNorml2d`, the layer described in the documents you hopefully read above.
 
@@ -652,7 +663,7 @@ In eval mode, you should use the running mean and variance that you stored befor
 
     with st.columns(1)[0]:
         st.markdown(r"""
-#### Exercise - implement `BatchNorm2d`
+### Exercise - implement `BatchNorm2d`
 
 Implement `BatchNorm2d` according to the [PyTorch docs](https://pytorch.org/docs/stable/generated/torch.nn.BatchNorm2d.html). Call your learnable parameters `weight` and `bias` for consistency with PyTorch.
 
@@ -691,7 +702,7 @@ if MAIN:
 ```
 """)
     st.markdown(r"""
-### `nn.AveragePool`
+### AveragePool
 
 Let's end our collection of `nn.Module`s with an easy one 🙂
 
@@ -701,7 +712,7 @@ Luckily, the simplest possible solution works decently: take the mean over the s
 """)
     with st.columns(1)[0]:
         st.markdown(r"""
-#### Exercise - implement `AveragePool`
+### Exercise - implement `AveragePool`
 
 This should be a pretty straightforward implementation; it doesn't have any weights or parameters of any kind, so you only need to implement the `forward` method.
 
@@ -978,7 +989,8 @@ Our `images` are of type `PIL.Image.Image`, so we can just call them in a cell t
 
 ```python
 images[0]
-```""")
+```
+""")
 
     st_image('chimpanzee.jpg', width=500)
 
@@ -1032,6 +1044,10 @@ If it doesn't, congratulations, you get to practice model debugging! Don't be af
 
     with st.expander(r"""Help! My model is predicting roughly the same percentage for every category!"""):
         st.markdown(r"""This can indicate that your model weights are randomly initialized, meaning the weight loading process didn't actually take. Or, you reinitialized your model by accident after loading the weights.""")
+
+    st.markdown(r"""
+In the next set of exercises, we'll dig a bit deeper into training and optimizers, and we'll end by training a ResNet from scratch on data from ImageNet.
+""")
  
 def section_finetune():
     st.markdown(r"""

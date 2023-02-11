@@ -1,0 +1,50 @@
+{
+    "os": "Windows-10-10.0.22621-SP0",
+    "python": "3.10.9",
+    "heartbeatAt": "2023-02-05T21:21:05.703249",
+    "startedAt": "2023-02-05T21:20:57.815233",
+    "docker": null,
+    "cuda": null,
+    "args": null,
+    "state": "running",
+    "program": "c:\\Users\\calsm\\Documents\\AI Alignment\\ARENA\\DEEP_LEARNING_INTRO_MATERIAL\\exercises\\part4_optimization_solutions.py",
+    "codePath": "exercises\\part4_optimization_solutions.py",
+    "git": {
+        "remote": "https://github.com/callummcdougall/Prerequisite-materials.git",
+        "commit": "3053f10b7784bb651139b88faf9fe8c7cab0e738"
+    },
+    "email": "cal.s.mcdougall@gmail.com",
+    "root": "C:/Users/calsm/Documents/AI Alignment/ARENA/DEEP_LEARNING_INTRO_MATERIAL",
+    "host": "lenovo-callum",
+    "username": "calsm",
+    "executable": "c:\\Users\\calsm\\anaconda3\\envs\\tl_intro_test\\python.exe",
+    "cpu_count": 8,
+    "cpu_count_logical": 16,
+    "cpu_freq": {
+        "current": 3201.0,
+        "min": 0.0,
+        "max": 3201.0
+    },
+    "cpu_freq_per_core": [
+        {
+            "current": 3201.0,
+            "min": 0.0,
+            "max": 3201.0
+        }
+    ],
+    "disk": {
+        "total": 474.71581649780273,
+        "used": 354.58681869506836
+    },
+    "gpu": "NVIDIA GeForce RTX 3050 Ti Laptop GPU",
+    "gpu_count": 1,
+    "gpu_devices": [
+        {
+            "name": "NVIDIA GeForce RTX 3050 Ti Laptop GPU",
+            "memory_total": 4294967296
+        }
+    ],
+    "memory": {
+        "total": 15.192405700683594
+    }
+}

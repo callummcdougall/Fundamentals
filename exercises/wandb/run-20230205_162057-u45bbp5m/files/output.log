@@ -1,0 +1,63 @@
+[34m[1mwandb[39m[22m: logging graph, to disable use `wandb.watch(log_graph=False)`
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Epoch 1/3, Loss = 1.384: 100%|██████████| 98/98 [00:38<00:00,  2.57it/s]
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Epoch 2/3, Loss = 0.985: 100%|██████████| 98/98 [00:41<00:00,  2.39it/s]
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Epoch 3/3, Loss = 0.809: 100%|██████████| 98/98 [00:36<00:00,  2.66it/s]
+[34m[1mwandb[39m[22m: [33mWARNING[39m Saving files without folders. If you want to preserve sub directories pass base_path to wandb.save, i.e. wandb.save("/mnt/folder/file.h5", base_path="/mnt")
+Saving model to: c:\Users\calsm\Documents\AI Alignment\ARENA\DEEP_LEARNING_INTRO_MATERIAL\exercises\wandb\run-20230205_162057-u45bbp5m\files/model_state_dict.pt

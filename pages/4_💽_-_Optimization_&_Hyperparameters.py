@@ -27,9 +27,10 @@ def get_fig_dict():
     names = [f"fig{i}" for i in range(1, 16)] + [f"rosenbrock_{i}" for i in range(1, 5)]
     return {(name[-1] if name.startswith("fig") else name): read_from_html(name) for name in names}
 
-if "fig_dict" not in st.session_state:
+if "fig_dict" not in st.session_state or "rosenbrock_1" not in st.session_state["fig_dict"]:
     fig_dict = get_fig_dict()
-    st.session_state["fig_dict"] = fig_dict
+    old_fig_dict = st.session_state.get("fig_dict", {})
+    st.session_state["fig_dict"] = {**old_fig_dict, **fig_dict}
 fig_dict = st.session_state["fig_dict"]
 
 def section_home():
@@ -43,7 +44,7 @@ These exercises will take you through how different optimisation algorithms work
 
 ## 2️⃣ Weights and Biases
 
-In this section, we'll look at methods for choosing hyperparameters effectively. You'll learn how to use **Weights and Biases**, a useful tool for hyperparameter search, which should allow you to tune your own transformer model by the end of today's exercises.
+In this section, we'll look at methods for choosing hyperparameters effectively. You'll learn how to use **Weights and Biases**, a useful tool for hyperparameter search. By the end of today, you should be able to use Weights and Biases to train the ResNet you created in the last set of exercises.
 
 """)
 # ## 3️⃣ Lambda Labs (bonus)
@@ -96,71 +97,104 @@ We have also provided a basic training & testing loop, almost identical to the o
 """)
 
     with st.expander("TRAIN FUNCTION - SIMPLE"):
-
         st.markdown(r"""
-```python
-def train(trainset, testset, epochs: int, loss_fn: Callable, batch_size: int, lr: float) -> tuple[list, list]:
+Defining a dataclass to hold the arguments to our training function (just like our `ConvNetTrainingArgs` from the previous exercises).
 
-    model = ResNet34().to(device).train()
-    optimizer = t.optim.Adam(model.parameters(), lr=lr)
-    
+```python
+@dataclass
+class ResNetTrainingArgs():
+    trainset: datasets.VisionDataset
+    testset: datasets.VisionDataset
+    epochs: int = 3
+    batch_size: int = 512
+    loss_fn: Callable[..., t.Tensor] = nn.CrossEntropyLoss()
+    optimizer: Callable[..., t.optim.Optimizer] = t.optim.Adam
+    optimizer_args: Tuple = ()
+    device: str = "cuda" if t.cuda.is_available() else "cpu"
+    filename_save_model: str = "models/part4_resnet.pt"
+    subset: int = 1
+```
+
+Our training function:
+
+```python
+def train_resnet(args: ResNetTrainingArgs) -> Tuple[list, list]:
+    '''
+    Defines and trains a ResNet.
+
+    This is a pretty standard training function, containing a test set for evaluations, plus a progress bar.
+    '''
+
+    trainset = args.trainset if (args.subset == 1) else Subset(args.trainset, range(0, len(args.trainset), args.subset))
+    testset = args.testset if (args.subset == 1) else Subset(args.testset, range(0, len(args.testset), args.subset))
+    trainloader = DataLoader(trainset, batch_size=args.batch_size, shuffle=True)
+    testloader = DataLoader(testset, batch_size=args.batch_size, shuffle=True)
+
+    model = ResNet34().to(args.device).train()
+    optimizer = args.optimizer(model.parameters(), *args.optimizer_args)
+
     loss_list = []
     accuracy_list = []
 
-    trainloader = DataLoader(trainset, shuffle=True, batch_size=batch_size)
-    testloader = DataLoader(testset, shuffle=True, batch_size=batch_size)
+    for epoch in range(args.epochs):
 
-    for epoch in range(epochs):
+        progress_bar = tqdm(trainloader)
+        for (imgs, labels) in progress_bar:
 
-        progress_bar = tqdm_notebook(trainloader)
+            imgs = imgs.to(args.device)
+            labels = labels.to(args.device)
 
-        for (x, y) in progress_bar:
-
-            x = x.to(device)
-            y = y.to(device)
-
-            optimizer.zero_grad()
-            y_hat = model(x)
-            loss = loss_fn(y_hat, y)
+            probs = model(imgs)
+            loss = args.loss_fn(probs, labels)
             loss.backward()
             optimizer.step()
+            optimizer.zero_grad()
 
+            progress_bar.set_description(f"Epoch {epoch+1}/{args.epochs}, Loss = {loss:.3f}")
+            
             loss_list.append(loss.item())
-
-            progress_bar.set_description(f"Epoch = {epoch}, Loss = {loss.item():.4f}")
 
         with t.inference_mode():
 
             accuracy = 0
             total = 0
 
-            for (x, y) in testloader:
+            for (imgs, labels) in testloader:
 
-                x = x.to(device)
-                y = y.to(device)
+                imgs = imgs.to(args.device)
+                labels = labels.to(args.device)
 
-                y_hat = model(x)
-                y_predictions = y_hat.argmax(1)
-                accuracy += (y_predictions == y).sum().item()
-                total += y.size(0)
+                probs = model(imgs)
+                predictions = probs.argmax(-1)
+                accuracy += (predictions == labels).sum().item()
+                total += imgs.size(0)
 
-            accuracy_list.append(accuracy/total)
+            accuracy_list.append(accuracy / total)
 
-        print(f"Epoch {epoch+1}/{epochs}, train loss is {loss:.6f}, accuracy is {accuracy}/{total}")
-
-    filename = "./w0d3_resnet.pt"
-    print(f"Saving model to: {filename}")
-    t.save(model.state_dict(), filename)
-
-    utils.plot_results(loss_list, accuracy_list)
+        print(f"Train loss = {loss:.6f}, Accuracy = {accuracy}/{total}")
+    
+    print(f"\nSaving model to: {args.filename_save_model}")
+    t.save(model, args.filename_save_model)
     return loss_list, accuracy_list
-    
-epochs = 1
-loss_fn = nn.CrossEntropyLoss()
-batch_size = 128
-lr = 0.001
-    
-loss_list, accuracy_list = train(trainset, testset, epochs, loss_fn, batch_size, lr)
+```
+
+And an example of running it (we've used `subset=5`, so that the training finishes faster, since we're just giving a basic overview of how it works here).
+
+```python
+if MAIN:
+    args = ResNetTrainingArgs(cifar_trainset, cifar_testset, subset=5)
+    loss_list, accuracy_list = train_resnet(args)
+
+    px.line(
+        y=loss_list, x=range(0, len(loss_list)*args.batch_size, args.batch_size),
+        title="Training loss for CNN, on MNIST data",
+        labels={"x": "Num images seen", "y": "Cross entropy loss"}, template="seaborn"
+    ).show()
+    px.line(
+        y=accuracy_list, x=range(1, len(accuracy_list)+1),
+        title="Training accuracy for CNN, on MNIST data",
+        labels={"x": "Epoch", "y": "Accuracy"}, template="ggplot2"
+    ).show()
 ```
 """)
 
@@ -181,50 +215,54 @@ You should visit the [Weights and Biases homepage](https://wandb.ai/home), and c
 
 ## Logging runs with `wandb`
 
-The most basic way you can use `wandb` is by logging variables during your run. This removes the need for excessive printing of output. Below is an example training loop which does this.
+The most basic way you can use `wandb` is by logging variables during your run. This removes the need for excessive printing of output. Below is an example training function that does this, which is almost identical to the one we gave above. The only differences (apart from a different model and datasets) are the replacing of our `loss_list` and `accuracy_list` with Weights and Biases functions to track this data.
 """)
 
     with st.expander("TRAIN FUNCTION - WANDB LOGGING"):
         st.markdown(r"""
+Our training function:
+
 ```python
-def train(trainset, testset, epochs: int, loss_fn: Callable, batch_size: int, lr: float) -> None:
+def train_resnet(args: ResNetTrainingArgs) -> None:
+    '''
+    Defines and trains a ResNet.
 
-    config_dict = {
-        "batch_size": batch_size,
-        "epochs": epochs,
-        "lr": lr,
-    }
-    wandb.init(project="w2d1_resnet", config=config_dict)
+    This is a pretty standard training function, containing weights and biases logging, a test set for evaluations, plus a progress bar.
+    '''
 
-    model = ResNet34().to(device).train()
-    optimizer = t.optim.Adam(model.parameters(), lr=lr)
-
-    examples_seen = 0
     start_time = time.time()
+    examples_seen = 0
 
-    trainloader = DataLoader(trainset, shuffle=True, batch_size=batch_size)
-    testloader = DataLoader(testset, shuffle=True, batch_size=batch_size)
+    config_dict = args.__dict__
+    wandb.init(project="part4_model_resnet", config=config_dict)
 
-    wandb.watch(model, criterion=loss_fn, log="all", log_freq=10, log_graph=True)
+    trainset = args.trainset if (args.subset == 1) else Subset(args.trainset, range(0, len(args.trainset), args.subset))
+    testset = args.testset if (args.subset == 1) else Subset(args.testset, range(0, len(args.testset), args.subset))
+    trainloader = DataLoader(trainset, batch_size=args.batch_size, shuffle=True)
+    testloader = DataLoader(testset, batch_size=args.batch_size, shuffle=True)
 
-    for epoch in range(epochs):
+    model = ResNet34().to(args.device).train()
+    optimizer = args.optimizer(model.parameters(), *args.optimizer_args)
 
-        progress_bar = tqdm_notebook(trainloader)
+    wandb.watch(model, criterion=args.loss_fn, log="all", log_freq=10, log_graph=True)
 
-        for (x, y) in progress_bar:
+    for epoch in range(args.epochs):
 
-            x = x.to(device)
-            y = y.to(device)
+        progress_bar = tqdm(trainloader)
+        for (imgs, labels) in progress_bar:
 
-            optimizer.zero_grad()
-            y_hat = model(x)
-            loss = loss_fn(y_hat, y)
+            imgs = imgs.to(args.device)
+            labels = labels.to(args.device)
+
+            probs = model(imgs)
+            loss = args.loss_fn(probs, labels)
             loss.backward()
             optimizer.step()
+            optimizer.zero_grad()
 
-            progress_bar.set_description(f"Epoch = {epoch}, Loss = {loss.item():.4f}")
-
-            examples_seen += len(x)
+            progress_bar.set_description(f"Epoch {epoch+1}/{args.epochs}, Loss = {loss:.3f}")
+            
+            examples_seen += imgs.size(0)
             wandb.log({"train_loss": loss, "elapsed": time.time() - start_time}, step=examples_seen)
 
         with t.inference_mode():
@@ -232,15 +270,15 @@ def train(trainset, testset, epochs: int, loss_fn: Callable, batch_size: int, lr
             accuracy = 0
             total = 0
 
-            for (x, y) in testloader:
+            for (imgs, labels) in testloader:
 
-                x = x.to(device)
-                y = y.to(device)
+                imgs = imgs.to(args.device)
+                labels = labels.to(args.device)
 
-                y_hat = model(x)
-                y_predictions = y_hat.argmax(1)
-                accuracy += (y_predictions == y).sum().item()
-                total += y.size(0)
+                probs = model(imgs)
+                predictions = probs.argmax(-1)
+                accuracy += (predictions == labels).sum().item()
+                total += imgs.size(0)
 
             wandb.log({"test_accuracy": accuracy/total}, step=examples_seen)
 
@@ -248,15 +286,22 @@ def train(trainset, testset, epochs: int, loss_fn: Callable, batch_size: int, lr
     print(f"Saving model to: {filename}")
     t.save(model.state_dict(), filename)
     wandb.save(filename)
+    wandb.finish()
+```
 
-train(trainset, testset, epochs, loss_fn, batch_size, lr)
+And running our function:
+
+```python
+if MAIN:
+    args = ResNetTrainingArgs(cifar_trainset, cifar_testset)
+    train_resnet(args)
 ```
 """)
 
     st.markdown(r"""
 When you run this function, it should give you a url which you can click on to see a graph of parameters plotted over time. You can also switch to a tabular view, which will let you compare multiple runs.
 
-Some notes on the parts of this function which have been changed:
+Here is an overview of the five times we call `wandb` functions, and what the purpose of each of them was:
 
 #### `wandb.init`
 
@@ -277,6 +322,10 @@ This logs metrics and media over time within your training loop. The two argumen
 This saves the details of your run. You can view your saved models by navigating to a run page, clicking on the `Files` tab, then clicking on your model file.
 
 You should try runing this function a couple of times with some different hyperparameters, and get an idea for how it works.
+
+#### `wandb.finish`
+
+This should be called at the very end of your training function. It's not strictly necessary, but will save you some time (because otherwise you'll have to waste time cancelling the run the next time you call the function).
 
 ## Hyperparameter search
 
@@ -632,22 +681,27 @@ def section_optim():
 import torch as t
 from torch import nn, optim
 from torchvision import datasets, transforms
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, Subset
 from fancy_einsum import einsum
-from typing import Union, Optional, Callable, Iterable
+from typing import Union, Optional, Callable, Iterable, Tuple
 import numpy as np
 from einops import rearrange
-from tqdm.notebook import tqdm_notebook
+from tqdm import tqdm
 import plotly.express as px
 import plotly.graph_objs as go
 from plotly.subplots import make_subplots
+from dataclasses import dataclass
 import time
 import wandb
 
-import part4_training_utils as utils
-import part4_training_tests as tests
+import part4_optimization_utils as utils
+import part4_optimization_tests as tests
+
+from part3_resnets_solutions import ResNet34
 
 device = t.device("cuda" if t.cuda.is_available() else "cpu")
+
+MAIN = __name__ == "__main__"
 ```
 
 ## Reading
@@ -739,9 +793,11 @@ We've provided you with a function to calculate Rosenbrock's Banana, and another
 def rosenbrocks_banana(x: t.Tensor, y: t.Tensor, a=1, b=100) -> t.Tensor:
     return (a - x) ** 2 + b * (y - x**2) ** 2 + 1
 
-x_range = [-2, 2]
-y_range = [-1, 3]
-fig = utils.plot_fn(rosenbrocks_banana, x_range, y_range, log_scale=True)
+
+if MAIN:
+    x_range = [-2, 2]
+    y_range = [-1, 3]
+    fig = utils.plot_fn(rosenbrocks_banana, x_range, y_range, log_scale=True)
 ```
 
 Your output should look like:
@@ -758,7 +814,7 @@ You can pass the extra argument `show_min=True` to all plotting functions, to in
 
     with st.columns(1)[0]:
         st.markdown(r"""
-#### Exercise - implement `opt_fn_with_sgd`
+### Exercise - implement `opt_fn_with_sgd`
 
 Implement the `opt_fn` function using `torch.optim.SGD`. Starting from `(-1.5, 2.5)`, run your function and add the resulting trajectory of `(x, y)` pairs to your contour plot. Did it find the minimum? Play with the learning rate and momentum a bit and see how close you can get within 100 iterations.
 
@@ -773,7 +829,12 @@ def opt_fn_with_sgd(fn: Callable, xy: t.Tensor, lr=0.001, momentum=0.98, n_iters
     Return: (n_iters, 2). The (x,y) BEFORE each step. So out[0] is the starting point.
     '''
     assert xy.requires_grad
-    pass
+    
+    xys = t.zeros((n_iters, 2))
+
+    # YOUR CODE HERE: run optimization, and populate `xys` with the coordinates before each step
+
+    return xys
 ```
 """)
 
@@ -791,18 +852,47 @@ This is a protective mechanism built into PyTorch. The idea is that once you con
 
 All you need to do to convince PyTorch you're a responsible adult is to call detach() on the tensor first, which returns a view that does not require grad and isn't part of the computation graph.
 """)
+        with st.expander("Solution"):
+            st.markdown(r"""
+```python
+def opt_fn_with_sgd(fn: Callable, xy: t.Tensor, lr=0.001, momentum=0.98, n_iters: int = 100):
+    '''
+    Optimize the a given function starting from the specified point.
+
+    xy: shape (2,). The (x, y) starting point.
+    n_iters: number of steps.
+    lr, momentum, 
+
+    Return: (n_iters, 2). The (x,y) BEFORE each step. So out[0] is the starting point.
+    '''
+    assert xy.requires_grad
+
+    xys = t.zeros((n_iters, 2))
+    optimizer = optim.SGD([xy], lr=lr, momentum=momentum)
+
+    for i in range(n_iters):
+        xys[i] = xy.detach()
+        out = fn(xy[0], xy[1])
+        out.backward()
+        optimizer.step()
+        optimizer.zero_grad()
+        
+    return xys
+```
+""")
 
     st.markdown(r"""
 We've also provided you with a function `plot_optimisation_sgd` to plot the steps in your optimisation algorithm. It can be run like this:
 
 ```python
-xy = t.tensor([-1.5, 2.5], requires_grad=True)
-x_range = [-2, 2]
-y_range = [-1, 3]
+if MAIN:
+    xy = t.tensor([-1.5, 2.5], requires_grad=True)
+    x_range = [-2, 2]
+    y_range = [-1, 3]
 
-fig = utils.plot_optimization_sgd(opt_fn_with_sgd, rosenbrocks_banana, xy, x_range, y_range, lr=0.001, momentum=0.98, show_min=True)
+    fig = utils.plot_optimization_sgd(opt_fn_with_sgd, rosenbrocks_banana, xy, x_range, y_range, lr=0.001, momentum=0.98, show_min=True)
 
-fig.show()
+    fig.show()
 ```
 
 Hopefully, you should see output like this:
@@ -851,7 +941,7 @@ You should also fill in the default PyTorch keyword arguments, where appropriate
 """)
     with st.columns(1)[0]:
         st.markdown(r"""
-#### Exercise - implement SGD
+### Exercise - implement SGD
 
 First, you should implement stochastic gradient descent. It should be like the [PyTorch version](https://pytorch.org/docs/stable/generated/torch.optim.SGD.html#torch.optim.SGD), but assume `nesterov=False`, `maximize=False`, and `dampening=0`. These simplifications mean that there are many variables in the pseudocode at that link which you can ignore.
 
@@ -973,7 +1063,7 @@ class SGD:
     st.markdown("")
     with st.columns(1)[0]:
         st.markdown(r"""
-#### Exercise - implement RMSprop
+### Exercise - implement RMSprop
 
 Once you've implemented SGD, you should do RMSprop in a similar way. Although the pseudocode is more complicated and there are more variables you'll have to track, there is no big conceptual difference between the task for RMSprop and SGD.
 
@@ -1007,8 +1097,8 @@ class RMSprop:
         pass
     
 
-
-tests.test_rmsprop(RMSprop)
+if MAIN:
+    tests.test_rmsprop(RMSprop)
 ```
 """)
     st.markdown("")
@@ -1024,7 +1114,7 @@ class Adam:
         self,
         params: Iterable[t.nn.parameter.Parameter],
         lr: float,
-        betas: tuple[float, float],
+        betas: Tuple[float, float],
         eps: float,
         weight_decay: float,
     ):
@@ -1044,15 +1134,22 @@ class Adam:
     def __repr__(self) -> str:
         pass
 
-tests.test_adam(Adam)
+
+if MAIN:
+    tests.test_adam(Adam)
 ```
 """)
     st.markdown(r"""
 ## Plotting multiple optimisers
 
 Finally, we've provided some code which should allow you to plot more than one of your optimisers at once.
+""")
 
-First, you should fill in this function, which will be just like your `opt_fn_with_sgd` from earlier, except that it works when passed an arbitrary optimizer (from the ones that you've defined).
+    with st.columns(1)[0]:
+        st.markdown(r"""
+### Exercise - implement `opt_fn`
+
+First, you should fill in this function. It will be pretty much exactly the same as your `opt_fn_with_sgd` from earlier, the only difference is that this function works when passed an arbitrary optimizer (you should only have to change one line of code from your previous function). The `optimizer_kwargs` argument is a dictionary which will contain keywords like `lr` and `momentum`.
 
 ```python
 def opt_fn(fn: Callable, xy: t.Tensor, optimizer_class, optimizer_kwargs, n_iters: int = 100):
@@ -1064,28 +1161,66 @@ def opt_fn(fn: Callable, xy: t.Tensor, optimizer_class, optimizer_kwargs, n_iter
     assert xy.requires_grad
     pass
 ```
+""")
+        with st.expander("Solution"):
+            st.markdown(r"""
+```python
+def opt_fn(fn: Callable, xy: t.Tensor, optimizer_class, optimizer_kwargs: dict, n_iters: int = 100):
+    '''Optimize the a given function starting from the specified point.
 
+    optimizer_class: one of the optimizers you've defined, either SGD, RMSprop, or Adam
+    optimzer_kwargs: keyword arguments passed to your optimiser (e.g. lr and weight_decay)
+    '''
+    assert xy.requires_grad
+
+    xys = t.zeros((n_iters, 2))
+    optimizer = optimizer_class([xy], **optimizer_kwargs)
+
+    for i in range(n_iters):
+        xys[i] = xy.detach()
+        out = fn(xy[0], xy[1])
+        out.backward()
+        optimizer.step()
+        optimizer.zero_grad()
+    
+    return xys
+```
+""")
+
+    st.markdown(r"""
 Once you've implemented this function, you can use `utils.plot_optimization` to create plots of multiple different optimizers at once. An example of how this should work can be found below. The argument `optimizers` should be a list of tuples `(optimizer_class, optimizer_kwargs)` which will get passed into `opt_fn`.
 
 ```python
-xy = t.tensor([-1.5, 2.5], requires_grad=True)
-x_range = [-2, 2]
-y_range = [-1, 3]
-optimizers = [
-    (solution.SGD, dict(lr=1e-3, momentum=0.98)),
-    (solution.SGD, dict(lr=5e-4, momentum=0.98)),
-]
+if MAIN:
+    xy = t.tensor([-1.5, 2.5], requires_grad=True)
+    x_range = [-2, 2]
+    y_range = [-1, 3]
+    optimizers = [
+        (SGD, dict(lr=1e-3, momentum=0.98)),
+        (SGD, dict(lr=5e-4, momentum=0.98)),
+    ]
 
-fig = utils.plot_optimization(opt_fn, fn, xy, optimizers, x_range, y_range)
+    fig = utils.plot_optimization(opt_fn, rosenbrocks_banana, xy, optimizers, x_range, y_range)
 
-fig.show()
+    fig.show()
 ```
 """)
     st.plotly_chart(fig_dict["rosenbrock_3"].update_layout(height=600), use_container_width=True)
 
     st.markdown(r"""
 You can try and play around with a few optimisers. Do Adam and RMSprop do well on this function? Why / why not? Can you find some other functions where they do better / worse, and plot those?
+""")
 
+    with st.expander("Spoiler - what you should find"):
+        st.markdown(r"""
+As mentioned, the Rosenbrock function is famously difficult to optimize (on account of it being very badly conditioned). Functions like Adam use an exponentially weighted moving average of the first moment, which is not exactly the same thing as momentum (although it's conceptually similar). So the only optimizer that works particularly well on this function is SGD with momentum close to 1.
+
+The best results I could find with Adam involved a hyperparams well outside the normal range for Adam (around `lr=0.15`, `betas=(0.85, 0.85)`), and this was still quite a lot worse than SGD w/ high momentum (although I didn't use any hyperparameter sweeps to find these parameters (see next section) so it might be possible to do better).
+
+However, it's worth noting that this function is pretty pathological, and in practice Adam generally outperforms SGD in most standard deep learning settings.
+""")
+
+    st.markdown(r"""
 ## Bonus - parameter groups
 """)
     st.error(r"""
@@ -1124,7 +1259,7 @@ More generally, if you're trying to replicate a paper, it's important to be able
 """)
     with st.columns(1)[0]:
         st.markdown(r"""
-#### Exercise - rewrite SGD to use parameter groups
+### Exercise - rewrite SGD to use parameter groups
 
 You should rewrite the `SGD` optimizer from the earlier exercises, to use `param_groups`. A few things to keep in mind during this exercise:
 
@@ -1149,7 +1284,78 @@ class SGD:
     def zero_grad(self) -> None:
         pass
 
-tests.test_sgd_param_groups(SGD)
+
+if MAIN:
+    tests.test_sgd_param_groups(SGD)
+```
+""")
+        with st.expander("Solution"):
+            st.markdown(r"""
+```python
+class SGD:
+
+    def __init__(self, params, **kwargs):
+        '''Implements SGD with momentum.
+
+        Accepts parameters in groups, or an iterable.
+
+        Like the PyTorch version, but assume nesterov=False, maximize=False, and dampening=0
+            https://pytorch.org/docs/stable/generated/torch.optim.SGD.html#torch.optim.SGD
+        '''
+
+        if not isinstance(params, (list, tuple)):
+            params = [{"params": params}]
+
+        # assuming params is a list of dictionaries, we make self.params also a list of dictionaries (with other kwargs filled in)
+        default_param_values = dict(momentum=0.0, weight_decay=0.0)
+
+        # creating a list of param groups, which we'll iterate over during the step function
+        self.param_groups = []
+        # creating a list of params, which we'll use to check whether a param has been added twice
+        params_to_check_for_duplicates = set()
+
+        for param_group in params:
+            # update param_group with kwargs passed in init; if this fails then update with the default values
+            param_group = {**default_param_values, **kwargs, **param_group}
+            # check that "lr" is defined (it should be either in kwargs, or in all of the param groups)
+            assert "lr" in param_group, "Error: one of the parameter groups didn't specify a value for required parameter `lr`."
+            # set the "params" and "gs" in param groups (note that we're storing 'gs' within each param group, rather than as self.gs)
+            param_group["params"] = list(param_group["params"])
+            param_group["gs"] = [t.zeros_like(p) for p in param_group["params"]]
+            self.param_groups.append(param_group)
+            # check that no params have been double counted
+            for param in param_group["params"]:
+                assert param not in params_to_check_for_duplicates, "Error: some parameters appear in more than one parameter group"
+                params_to_check_for_duplicates.add(param)
+
+        self.t = 1
+
+    def zero_grad(self) -> None:
+        for param_group in self.param_groups:
+            for p in param_group["params"]:
+                p.grad = None
+
+    @t.inference_mode()
+    def step(self) -> None:
+        # loop through each param group
+        for i, param_group in enumerate(self.param_groups):
+            # get the parameters from the param_group
+            lmda = param_group["weight_decay"]
+            mu = param_group["momentum"]
+            gamma = param_group["lr"]
+            # loop through each parameter within each group
+            for j, (p, g) in enumerate(zip(param_group["params"], param_group["gs"])):
+                # Implement the algorithm in the pseudocode to get new values of params and g
+                new_g = p.grad
+                if lmda != 0:
+                    new_g = new_g + (lmda * p)
+                if mu > 0 and self.t > 1:
+                    new_g = (mu * g) + new_g
+                # Update params (remember, this must be inplace)
+                param_group["params"][j] -= gamma * new_g
+                # Update g
+                self.param_groups[i]["gs"][j] = new_g
+        self.t += 1
 ```
 """)
 

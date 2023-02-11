@@ -233,7 +233,7 @@ Note - it might seem strange at first why we need `x` and `out` to be inputs, `o
 
     with st.columns(1)[0]:
         st.markdown(r"""
-#### Exercise - implement `log_back`
+### Exercise - implement `log_back`
 """)
 
         st.markdown(r"""
@@ -372,7 +372,7 @@ If we're trying to compute $\frac{dL}{dx}$, where $x$ was broadcasted during the
 We used the term "unbroadcast" because the way that our tensor's shape changes will be the reverse of how it changed during broadcasting. If `x` was broadcasted from `(4,) -> (3, 4)`, then unbroadcasting will have to take a tensor of shape `(3, 4)` and sum over it to return a tensor of shape `(4,)`.""")
     with st.columns(1)[0]:
         st.markdown(r"""
-#### Exercise - implement `unbroadcast`
+### Exercise - implement `unbroadcast`
 
 Below, you should implement this function. `broadcasted` is the array you want to sum over, and `original` is the array with the shape you want to return. Your function should:
 
@@ -445,7 +445,7 @@ Functions that are differentiable with respect to more than one input tensor are
 """)
     with st.columns(1)[0]:
         st.markdown(r"""
-#### Exercise - implement both `multiply_back` functions
+### Exercise - implement both `multiply_back` functions
 
 Below, you should implement both `multiply_back0` and `multiply_back1`. 
 
@@ -548,7 +548,7 @@ Now we'll use our backward functions to do backpropagation manually, for the fol
 
     with st.columns(1)[0]:
         st.markdown(r"""
-#### Exercise - implement `forward_and_back`
+### Exercise - implement `forward_and_back`
 
 Below, you should implement the `forward_and_back` function. This is an opportunity for you to practice using the backward functions you've written so far, and should hopefully give you a better sense of how the full backprop function will eventually work.
 
@@ -682,7 +682,7 @@ The `Recipe` takes care of tracking the forward functions in our computational g
 """)
     with st.columns(1)[0]:
         st.markdown(r"""
-#### Exercise - implement `BackwardFuncLookup`
+### Exercise - implement `BackwardFuncLookup`
 
 We will define a class `BackwardFuncLookup` in order to find the backward function for a given forward function. Details of the implementation are left up to you.
 
@@ -927,7 +927,7 @@ Let's start with a simple case: our `log` function. `log_forward` is a wrapper, 
 """)
     with st.columns(1)[0]:
         st.markdown(r"""
-#### Exercise - implement `log_forward`
+### Exercise - implement `log_forward`
 
 Our `log` function must do the following:
 
@@ -987,7 +987,7 @@ Now let's do the same for multiply, to see how to handle functions with multiple
 """)
     with st.columns(1)[0]:
         st.markdown(r"""
-#### Exercise - implement `multiply_forward`
+### Exercise - implement `multiply_forward`
 
 There are a few differences between this and log:
 
@@ -1067,7 +1067,7 @@ Implement the higher order function `wrap_forward_fn` that takes a `Arr -> Arr` 
 """)
     with st.columns(1)[0]:
         st.markdown(r"""
-#### Exercise - implement `wrap_forward_fn`
+### Exercise - implement `wrap_forward_fn`
 
 ```python
 def wrap_forward_fn(numpy_func: Callable, is_differentiable=True) -> Callable:
@@ -1167,7 +1167,7 @@ As part of backprop, we need to sort the nodes of our graph so we can traverse t
 """)
     with st.columns(1)[0]:
         st.markdown(r"""
-#### Exercise - implement `topological_sort`
+### Exercise - implement `topological_sort`
 """)
         st.error(r"*Note, it's completely fine to skip this problem if you're not very interested in it. You can just look at the solution (which is an implementation of depth first search). This is more of a fun LeetCode-style puzzle, and writing a solution for this isn't crucial for the overall experience of these exercises.*""")
         st.markdown(r"""
@@ -1374,7 +1374,7 @@ In the computational graph in the next section, the only leaves are `a`, `b` and
 """)
     with st.columns(1)[0]:
         st.markdown(r"""
-#### Exercise - implement `backprop`
+### Exercise - implement `backprop`
 
 Now, we get to the actual backprop function! Some code is provided below, which you should complete.
 

@@ -6,6 +6,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import numpy as np
+from torchvision import datasets
 
 class Net(nn.Module):
     def __init__(self, in_dim: int, hidden_dim: int, out_dim: int):
@@ -188,10 +189,10 @@ def plot_results(loss_list, accuracy_list):
     fig.update_layout(template="simple_white", title_text="Training loss & accuracy on CIFAR10")
     fig.show()
 
-def show_cifar_images(trainset, rows=3, cols=5):
+def show_cifar_images(trainset: datasets.VisionDataset, rows=3, cols=5):
     
     img = trainset.data[:rows*cols]
-    fig = px.imshow(img, facet_col=0, facet_col_wrap=cols)
+    fig = px.imshow(img, facet_col=0, facet_col_wrap=cols, height=150*(rows+1), width=150*(cols+1))
     for i, j in enumerate(np.arange(rows*cols).reshape(rows, cols)[::-1].flatten()):
             fig.layout.annotations[i].text = trainset.classes[trainset.targets[j]]
     fig.show()

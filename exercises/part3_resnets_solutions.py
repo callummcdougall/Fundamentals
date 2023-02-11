@@ -6,9 +6,9 @@ from torch import nn
 from dataclasses import dataclass
 import torchvision
 from torchvision import datasets, transforms
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, Subset
 from tqdm import tqdm
-from typing import List, Callable
+from typing import List, Callable, Tuple
 import PIL
 from PIL import Image
 import plotly.express as px
@@ -16,6 +16,7 @@ from tqdm import tqdm
 from torchvision import datasets, transforms
 from torch.utils.data import DataLoader
 from PIL import Image
+import torchinfo
 
 from part2_cnns_solutions import ReLU, Conv2d, MaxPool2d, Flatten, Linear
 
@@ -52,59 +53,77 @@ if MAIN:
 # %%
 
 if MAIN:
+    summary = torchinfo.summary(model, input_size=(1, 1, 28, 28))
+    print(summary)
+
+# %%
+
+def get_mnist(subset: int = 5):
+    '''Returns MNIST training data, sampled by the frequency given in `subset`.'''
     mnist_transform = transforms.Compose([
         transforms.ToTensor(),
         transforms.Normalize((0.1307,), (0.3081,))
     ])
+    mnist_trainset = datasets.MNIST(root="./data", train=True, download=True, transform=mnist_transform)
+    mnist_testset = datasets.MNIST(root="./data", train=False, download=True, transform=mnist_transform)
 
-    mnist_trainset = datasets.MNIST(root="./data", train=True, transform=mnist_transform, download=True)
+    if subset > 1:
+        mnist_trainset = Subset(mnist_trainset, range(0, len(mnist_trainset), subset))
+        mnist_testset = Subset(mnist_testset, range(0, len(mnist_testset), subset))
+
+    return mnist_trainset, mnist_testset
+
+if MAIN:
+    mnist_trainset, mnist_testset = get_mnist()
     mnist_trainloader = DataLoader(mnist_trainset, batch_size=64, shuffle=True)
-
-    mnist_testset = datasets.MNIST(root="./data", train=False, transform=mnist_transform, download=True)
     mnist_testloader = DataLoader(mnist_testset, batch_size=64, shuffle=True)
 
 # %%
-
+# 
 @dataclass
 class ConvNetTrainingArgs():
+    trainset: datasets.VisionDataset
+    testset: datasets.VisionDataset
+
     epochs: int = 3
     batch_size: int = 512
-    loss_fn: Callable = nn.CrossEntropyLoss()
+    loss_fn: Callable[..., t.Tensor] = nn.CrossEntropyLoss()
+    optimizer: Callable[..., t.optim.Optimizer] = t.optim.Adam
+    optimizer_args: Tuple = ()
     device: str = "cuda" if t.cuda.is_available() else "cpu"
-    filename_save_model: str = "./part2_cnn_model.pt"
+    filename_save_model: str = "models/part3_convnet.pt"
 
-    # def __repr__(self):
-    #     import pprint
-    #     return pprint.pformat(self.__dict__)
-
+if MAIN:
+    args = ConvNetTrainingArgs(mnist_trainset, mnist_testset)
+    print(args)
 
 # %%
 
-def train_convnet(args: ConvNetTrainingArgs):
+def train_convnet(args: ConvNetTrainingArgs) -> Tuple[list, list]:
     '''
     Defines a ConvNet using our previous code, and trains it on the data in trainloader.
     
     Returns tuple of (loss_list, accuracy_list), where accuracy_list contains the fraction of accurate classifications on the test set, at the end of each epoch.
     '''
 
-    trainloader = DataLoader(mnist_trainset, batch_size=args.batch_size, shuffle=True)
-    testloader = DataLoader(mnist_testset, batch_size=args.batch_size, shuffle=True)
+    trainloader = DataLoader(args.trainset, batch_size=args.batch_size, shuffle=True)
+    testloader = DataLoader(args.testset, batch_size=args.batch_size, shuffle=True)
 
     model = ConvNet().to(args.device).train()
-    optimizer = t.optim.Adam(model.parameters())
+    optimizer = args.optimizer(model.parameters(), *args.optimizer_args)
     loss_list = []
     accuracy_list = []
     
     for epoch in range(args.epochs):
 
         progress_bar = tqdm(trainloader)
-        for (x, y) in progress_bar:
+        for (imgs, labels) in progress_bar:
             
-            x = x.to(args.device)
-            y = y.to(args.device)
+            imgs = imgs.to(args.device)
+            labels = labels.to(args.device)
             
-            y_hat = model(x)
-            loss = args.loss_fn(y_hat, y)
+            probs = model(imgs)
+            loss = args.loss_fn(probs, labels)
             loss.backward()
             optimizer.step()
             optimizer.zero_grad()
@@ -118,15 +137,15 @@ def train_convnet(args: ConvNetTrainingArgs):
             accuracy = 0
             total = 0
             
-            for (x, y) in testloader:
+            for (imgs, labels) in testloader:
 
-                x = x.to(args.device)
-                y = y.to(args.device)
+                imgs = imgs.to(args.device)
+                labels = labels.to(args.device)
 
-                y_hat = model(x)
-                y_predictions = y_hat.argmax(-1)
-                accuracy += (y_predictions == y).sum().item()
-                total += y.size(0)
+                probs = model(imgs)
+                predictions = probs.argmax(-1)
+                accuracy += (predictions == labels).sum().item()
+                total += imgs.size(0)
 
             accuracy_list.append(accuracy/total)
             
@@ -136,25 +155,22 @@ def train_convnet(args: ConvNetTrainingArgs):
     t.save(model, args.filename_save_model)
     return loss_list, accuracy_list
 
-# %%
 
 if MAIN:
-    args = ConvNetTrainingArgs()
     loss_list, accuracy_list = train_convnet(args)
 
 # %%
 
 if MAIN:
     px.line(
-        y=loss_list, 
+        y=loss_list, x=range(0, len(loss_list)*args.batch_size, args.batch_size),
         title="Training loss for CNN, on MNIST data",
-        labels={"x": "Batch number", "y": "Cross entropy loss"}
+        labels={"x": "Num images seen", "y": "Cross entropy loss"}, template="seaborn"
     ).show()
     px.line(
-        y=accuracy_list, x=range(1, 4),
+        y=accuracy_list, x=range(1, len(accuracy_list)+1),
         title="Training accuracy for CNN, on MNIST data",
-        labels={"x": "Epoch", "y": "Accuracy"},
-        template="ggplot2"
+        labels={"x": "Epoch", "y": "Accuracy"}, template="ggplot2"
     ).show()
 
 # %%
@@ -350,6 +366,9 @@ class ResNet34(nn.Module):
         x = self.residual_layers(x)
         x = self.out_layers(x)
         return x
+
+    # def __call__(self, x: t.Tensor) -> t.Tensor:
+    #     return self.forward(x)
 
 if MAIN:
     my_resnet = ResNet34()
