@@ -1045,7 +1045,7 @@ out_channels in_channels kernel_height kernel_width \
 
 For a full version of `conv`, and for `maxpool` (which will follow shortly), you'll need to implement `pad` helper functions. PyTorch has some very generic padding functions, but to keep things simple and build up gradually, we'll write 1D and 2D functions individually.
 
-Tip: use the `new_full` method of the input tensor. This is a clean way to ensure that the output tensor is on the same device as the input, and has the same dtype.
+Tip: use the `new_full` method of the input tensor. This is a clean way to ensure that the output tensor is on the same device as the input (more on this tomorrow), and has the same datatype.
 
 Tip: you can use three dots to denote slicing over multiple dimensions. For instance, `x[..., 0]` will take the `0th` slice of `x` along its last dimension. This is equivalent to `x[:, 0]` for 2D, `x[:, :, 0]` for 3D, etc.
 
