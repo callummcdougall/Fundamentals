@@ -1823,7 +1823,7 @@ Congratulations for getting to the end of day 2! That was a lot of material we c
     # st.button("Press me when you're finished! 🙂", on_click = st.balloons)
 
     st.markdown(r"""
-As a taster for next session's material, below we've provided you with a training loop for a simple convolutional neural network which classifies MNIST images.
+As a taster for material later in the course, below we've provided you with a training loop for a simple convolutional neural network which classifies MNIST images. **Don't worry about understanding this code in detail, we'll go over it all in more detail later.**
 
 First, we'll define a very simple convolutional neural network:
 
@@ -1847,7 +1847,7 @@ if MAIN:
     print(model)
 ```
 
-Now, let's load in and inspect our training data (which involves doing some basic transformations). Don't worry about understanding this in detail, we'll go over it all in more detail next session.
+Now, let's load in and inspect our training data (which involves doing some basic transformations). 
 
 ```python
 def get_mnist():

@@ -7,8 +7,8 @@ import time
 from typing import Any, Callable, Iterator, Iterable, Optional, Union, Dict, List, Tuple
 from tqdm import tqdm
 
-import part5_backprop_tests as tests
-import part5_backprop_utils as utils
+import part3_backprop_tests as tests
+import part3_backprop_utils as utils
 
 Arr = np.ndarray
 grad_tracking_enabled = True

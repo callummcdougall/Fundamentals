@@ -1,12 +1,10 @@
 # %%
 
-import torch
-import torch.utils.data
+import torch as t
 from torchvision import datasets, transforms
-from tqdm.auto import tqdm
+from tqdm import tqdm
 from typing import Optional
 import numpy as np
-import warnings
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 from einops import repeat
@@ -41,25 +39,20 @@ def get_mnist(subsample: Optional[int] = None):
     transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.28,), (0.35,))])
     train_indexes = range(0, len(mnist_train), subsample)
     train_reduced = [mnist_train[i] for i in train_indexes]
-    train_tensors = torch.utils.data.TensorDataset(
-        torch.stack([transform(img) for img, label in tqdm(train_reduced, desc="Training data")]),
-        torch.tensor([label for img, label in train_reduced]),
+    train_tensors = t.utils.data.TensorDataset(
+        t.stack([transform(img) for img, label in tqdm(train_reduced, desc="Training data")]),
+        t.tensor([label for img, label in train_reduced]),
     )
 
     test_indexes = range(0, len(mnist_test), subsample)
     test_reduced = [mnist_test[i] for i in test_indexes]
-    test_tensors = torch.utils.data.TensorDataset(
-        torch.stack([transform(img) for img, label in tqdm(test_reduced, desc="Test data")]),
-        torch.tensor([label for img, label in test_reduced]),
+    test_tensors = t.utils.data.TensorDataset(
+        t.stack([transform(img) for img, label in tqdm(test_reduced, desc="Test data")]),
+        t.tensor([label for img, label in test_reduced]),
     )
 
-    train_loader = torch.utils.data.DataLoader(train_tensors, shuffle=True, batch_size=512)
-    test_loader = torch.utils.data.DataLoader(test_tensors, batch_size=512)
+    train_loader = t.utils.data.DataLoader(train_tensors, shuffle=True, batch_size=512)
+    test_loader = t.utils.data.DataLoader(test_tensors, batch_size=512)
     return train_loader, test_loader
 
-# %%
-
-a, b = get_mnist()
-# %%
-len(a)
 # %%

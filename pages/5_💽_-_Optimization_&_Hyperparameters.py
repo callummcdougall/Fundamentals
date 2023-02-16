@@ -682,22 +682,17 @@ import torch as t
 from torch import nn, optim
 from torchvision import datasets, transforms
 from torch.utils.data import DataLoader, Subset
-from fancy_einsum import einsum
-from typing import Union, Optional, Callable, Iterable, Tuple
-import numpy as np
-from einops import rearrange
+from typing import Callable, Iterable, Tuple
 from tqdm import tqdm
 import plotly.express as px
-import plotly.graph_objs as go
-from plotly.subplots import make_subplots
 from dataclasses import dataclass
 import time
 import wandb
 
-import part4_optimization_utils as utils
-import part4_optimization_tests as tests
+import part5_optimization_utils as utils
+import part5_optimization_tests as tests
 
-from part3_resnets_solutions import ResNet34
+from part4_resnets_solutions import ResNet34
 
 device = t.device("cuda" if t.cuda.is_available() else "cpu")
 

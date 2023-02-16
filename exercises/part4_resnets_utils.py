@@ -1,7 +1,4 @@
-from plotly.subplots import make_subplots
-import plotly.graph_objects as go
 from IPython.display import display
-import torchvision
 import numpy as np
 import pandas as pd
 
