@@ -1332,7 +1332,8 @@ Now, you should write the function `sorted_computational_graph`. This should be 
 ```python
 def sorted_computational_graph(tensor: Tensor) -> List[Tensor]:
     '''
-    For a given tensor, return a list of Tensors that make up the nodes of the given Tensor's computational graph, in reverse topological order (i.e. `tensor` should be first).
+    For a given tensor, return a list of Tensors that make up the nodes of the given Tensor's computational graph,
+    in reverse topological order (i.e. `tensor` should be first).
     '''
     pass
 
@@ -1357,7 +1358,8 @@ Compare your output with the computational graph. You should never be printing `
 ```python
 def sorted_computational_graph(tensor: Tensor) -> List[Tensor]:
     '''
-    For a given tensor, return a list of Tensors that make up the nodes of the given Tensor's computational graph, in reverse topological order (i.e. `tensor` should be first).
+    For a given tensor, return a list of Tensors that make up the nodes of the given Tensor's computational graph,
+    in reverse topological order (i.e. `tensor` should be first).
     '''
     
     def get_parents(tensor: Tensor) -> List[Tensor]:
@@ -2744,7 +2746,7 @@ def section_bonus():
 
 # Bonus
 
-Congratulations on finishing the day's main content! 
+Congratulations on finishing the day's main content! Here are a few more bonus things for you to explore.
 
 ### In-Place Operation Warnings
 

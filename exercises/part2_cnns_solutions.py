@@ -606,9 +606,6 @@ if MAIN:
 
 # %%
 
-
-# %%
-
 def write_to_html(fig, filename):
     with open(f"{filename}.html", "w") as f:
         f.write(fig.to_html(full_html=False, include_plotlyjs='cdn'))

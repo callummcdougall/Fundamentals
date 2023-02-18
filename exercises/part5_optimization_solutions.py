@@ -10,6 +10,7 @@ import plotly.express as px
 from dataclasses import dataclass
 import time
 import wandb
+import functools
 
 import part5_optimization_utils as utils
 import part5_optimization_tests as tests
@@ -337,19 +338,27 @@ if MAIN:
 
 # %%
 
-if MAIN:
+def get_cifar10(subset: int = 1):
+    '''Returns CIFAR training data, sampled by the frequency given in `subset`.'''
     cifar_mean = [0.485, 0.456, 0.406]
     cifar_std = [0.229, 0.224, 0.225]
 
     cifar_transform = transforms.Compose([
         transforms.ToTensor(),
-        transforms.Normalize(mean=cifar_mean, std=cifar_std)
+        transforms.Normalize(cifar_mean, cifar_std)
     ])
-
     cifar_trainset = datasets.CIFAR10(root='./data', train=True, download=True, transform=cifar_transform)
     cifar_testset = datasets.CIFAR10(root='./data', train=False, download=True, transform=cifar_transform)
 
-    utils.show_cifar_images(cifar_trainset, rows=3, cols=5)
+    if subset > 1:
+        cifar_trainset = Subset(cifar_trainset, range(0, len(cifar_trainset), subset))
+        cifar_testset = Subset(cifar_testset, range(0, len(cifar_testset), subset))
+
+    return cifar_trainset, cifar_testset
+
+if MAIN:
+    cifar_trainset, cifar_testset = get_cifar10(subset=5)
+    utils.show_cifar_images(cifar_trainset.dataset, rows=3, cols=5)
 
 # %%
 
@@ -364,7 +373,7 @@ class ResNetTrainingArgs():
     optimizer_args: Tuple = ()
     device: str = "cuda" if t.cuda.is_available() else "cpu"
     filename_save_model: str = "models/part4_resnet.pt"
-    subset: int = 1
+
 
 def train_resnet(args: ResNetTrainingArgs) -> Tuple[list, list]:
     '''
@@ -373,10 +382,8 @@ def train_resnet(args: ResNetTrainingArgs) -> Tuple[list, list]:
     This is a pretty standard training function, containing a test set for evaluations, plus a progress bar.
     '''
 
-    trainset = args.trainset if (args.subset == 1) else Subset(args.trainset, range(0, len(args.trainset), args.subset))
-    testset = args.testset if (args.subset == 1) else Subset(args.testset, range(0, len(args.testset), args.subset))
-    trainloader = DataLoader(trainset, batch_size=args.batch_size, shuffle=True)
-    testloader = DataLoader(testset, batch_size=args.batch_size, shuffle=True)
+    trainloader = DataLoader(args.trainset, batch_size=args.batch_size, shuffle=True)
+    testloader = DataLoader(args.testset, batch_size=args.batch_size, shuffle=True)
 
     model = ResNet34().to(args.device).train()
     optimizer = args.optimizer(model.parameters(), *args.optimizer_args)
@@ -427,23 +434,26 @@ def train_resnet(args: ResNetTrainingArgs) -> Tuple[list, list]:
 
 
 if MAIN:
-    args = ResNetTrainingArgs(cifar_trainset, cifar_testset, subset=5)
+    args = ResNetTrainingArgs(cifar_trainset, cifar_testset)
     loss_list, accuracy_list = train_resnet(args)
 
     px.line(
         y=loss_list, x=range(0, len(loss_list)*args.batch_size, args.batch_size),
         title="Training loss for CNN, on MNIST data",
-        labels={"x": "Num images seen", "y": "Cross entropy loss"}, template="seaborn"
+        labels={"x": "Num images seen", "y": "Cross entropy loss"}, template="ggplot2",
+        height=400, width=600
     ).show()
+
     px.line(
         y=accuracy_list, x=range(1, len(accuracy_list)+1),
         title="Training accuracy for CNN, on MNIST data",
-        labels={"x": "Epoch", "y": "Accuracy"}, template="ggplot2"
+        labels={"x": "Epoch", "y": "Accuracy"}, template="seaborn",
+        height=400, width=600
     ).show()
 
 # %%
 
-def train_resnet(args: ResNetTrainingArgs) -> None:
+def train_resnet_wandb(args: ResNetTrainingArgs) -> None:
     '''
     Defines and trains a ResNet.
 
@@ -456,10 +466,8 @@ def train_resnet(args: ResNetTrainingArgs) -> None:
     config_dict = args.__dict__
     wandb.init(project="part4_model_resnet", config=config_dict)
 
-    trainset = args.trainset if (args.subset == 1) else Subset(args.trainset, range(0, len(args.trainset), args.subset))
-    testset = args.testset if (args.subset == 1) else Subset(args.testset, range(0, len(args.testset), args.subset))
-    trainloader = DataLoader(trainset, batch_size=args.batch_size, shuffle=True)
-    testloader = DataLoader(testset, batch_size=args.batch_size, shuffle=True)
+    trainloader = DataLoader(args.trainset, batch_size=args.batch_size, shuffle=True)
+    testloader = DataLoader(args.testset, batch_size=args.batch_size, shuffle=True)
 
     model = ResNet34().to(args.device).train()
     optimizer = args.optimizer(model.parameters(), *args.optimizer_args)
@@ -511,5 +519,99 @@ def train_resnet(args: ResNetTrainingArgs) -> None:
 
 if MAIN:
     args = ResNetTrainingArgs(cifar_trainset, cifar_testset)
-    train_resnet(args)
+    train_resnet_wandb(args)
+
+# %%
+
+def train_resnet_wandb_sweep(args: ResNetTrainingArgs) -> None:
+    '''
+    Defines and trains a ResNet.
+
+    This is a pretty standard training function, containing weights and biases logging, a test set for evaluations, plus a progress bar.
+    '''
+
+    start_time = time.time()
+    examples_seen = 0
+
+    # This is the only part of the function that changes
+    wandb.init()
+    args.epochs = wandb.config.epochs
+    args.batch_size = wandb.config.batch_size
+    args.optimizer_args = (wandb.config.lr,)
+
+    trainloader = DataLoader(args.trainset, batch_size=args.batch_size, shuffle=True)
+    testloader = DataLoader(args.testset, batch_size=args.batch_size, shuffle=True)
+
+    model = ResNet34().to(args.device).train()
+    optimizer = args.optimizer(model.parameters(), *args.optimizer_args)
+
+    wandb.watch(model, criterion=args.loss_fn, log="all", log_freq=10, log_graph=True)
+
+    for epoch in range(args.epochs):
+
+        progress_bar = tqdm(trainloader)
+        for (imgs, labels) in progress_bar:
+
+            imgs = imgs.to(args.device)
+            labels = labels.to(args.device)
+
+            probs = model(imgs)
+            loss = args.loss_fn(probs, labels)
+            loss.backward()
+            optimizer.step()
+            optimizer.zero_grad()
+
+            progress_bar.set_description(f"Epoch {epoch+1}/{args.epochs}, Loss = {loss:.3f}")
+            
+            examples_seen += imgs.size(0)
+            wandb.log({"train_loss": loss, "elapsed": time.time() - start_time}, step=examples_seen)
+
+        with t.inference_mode():
+
+            accuracy = 0
+            total = 0
+
+            for (imgs, labels) in testloader:
+
+                imgs = imgs.to(args.device)
+                labels = labels.to(args.device)
+
+                probs = model(imgs)
+                predictions = probs.argmax(-1)
+                accuracy += (predictions == labels).sum().item()
+                total += imgs.size(0)
+
+            wandb.log({"test_accuracy": accuracy/total}, step=examples_seen)
+
+    filename = f"{wandb.run.dir}/model_state_dict.pt"
+    print(f"Saving model to: {filename}")
+    t.save(model.state_dict(), filename)
+    wandb.save(filename)
+    wandb.finish()
+
+sweep_config = dict(
+    method = 'random',
+    name = 'resnet_sweep',
+    metric = dict(name = 'test_accuracy', goal = 'maximize'),
+    parameters = dict( 
+        batch_size = dict(values = [64, 128, 256, 512]),
+        epochs = dict(min = 1, max = 3),
+        lr = dict(max = 0.1, min = 0.0001, distribution = 'log_uniform_values'),
+    )
+)
+
+if MAIN:
+    # Define a training function that takes no arguments (this is necessary for doing sweeps)
+    train = functools.partial(
+        train_resnet_wandb_sweep, 
+        args=ResNetTrainingArgs(cifar_trainset, cifar_testset)
+    )
+
+    # Run the sweep
+    wandb.agent(
+        sweep_id=wandb.sweep(sweep=sweep_config, project='resnet_sweep'), 
+        function=train, 
+        count=5
+    )
+
 # %%

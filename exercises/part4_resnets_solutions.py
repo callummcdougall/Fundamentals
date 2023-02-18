@@ -1,24 +1,24 @@
 # %%
 
-from einops import rearrange
 import torch as t
 from torch import nn
+from einops import rearrange
 from dataclasses import dataclass
 import torchvision
 from torchvision import datasets, transforms
 from torch.utils.data import DataLoader, Subset
 from tqdm import tqdm
 from typing import List, Callable, Tuple
-import PIL
 from PIL import Image
 import plotly.express as px
-from tqdm import tqdm
-from torchvision import datasets, transforms
-from torch.utils.data import DataLoader
-from PIL import Image
+from IPython.display import display
 import torchinfo
+import json
 
 from part2_cnns_solutions import ReLU, Conv2d, MaxPool2d, Flatten, Linear
+
+import part4_resnets_tests as tests
+import part4_resnets_utils as utils
 
 MAIN = __name__ == "__main__"
 
@@ -58,7 +58,7 @@ if MAIN:
 
 # %%
 
-def get_mnist(subset: int = 5):
+def get_mnist(subset: int = 1):
     '''Returns MNIST training data, sampled by the frequency given in `subset`.'''
     mnist_transform = transforms.Compose([
         transforms.ToTensor(),
@@ -79,7 +79,7 @@ if MAIN:
     mnist_testloader = DataLoader(mnist_testset, batch_size=64, shuffle=True)
 
 # %%
-# 
+
 @dataclass
 class ConvNetTrainingArgs():
     trainset: datasets.VisionDataset
@@ -91,7 +91,7 @@ class ConvNetTrainingArgs():
     optimizer: Callable[..., t.optim.Optimizer] = t.optim.Adam
     optimizer_args: Tuple = ()
     device: str = "cuda" if t.cuda.is_available() else "cpu"
-    filename_save_model: str = "models/part3_convnet.pt"
+    filename_save_model: str = "models/part4_convnet.pt"
 
 if MAIN:
     args = ConvNetTrainingArgs(mnist_trainset, mnist_testset)
@@ -164,13 +164,15 @@ if MAIN:
 if MAIN:
     px.line(
         y=loss_list, x=range(0, len(loss_list)*args.batch_size, args.batch_size),
-        title="Training loss for CNN, on MNIST data",
-        labels={"x": "Num images seen", "y": "Cross entropy loss"}, template="seaborn"
+        labels={"y": "Cross entropy loss", "x": "Num images seen"}, title="MNIST training curve (cross entropy loss)", template="ggplot2"
+    ).update_layout(
+        showlegend=False, yaxis_range=[0, max(loss_list)*1.1], height=400, width=600
     ).show()
     px.line(
         y=accuracy_list, x=range(1, len(accuracy_list)+1),
         title="Training accuracy for CNN, on MNIST data",
-        labels={"x": "Epoch", "y": "Accuracy"}, template="ggplot2"
+        labels={"x": "Epoch", "y": "Accuracy"}, template="seaborn",
+        height=400, width=600
     ).show()
 
 # %%
@@ -187,6 +189,8 @@ class Sequential(nn.Module):
             if mod is not None:
                 x = mod(x)
         return x
+
+# %%
 
 class BatchNorm2d(nn.Module):
     running_mean: t.Tensor         # shape: (num_features,)
@@ -242,6 +246,13 @@ class BatchNorm2d(nn.Module):
     def extra_repr(self) -> str:
         return ", ".join([f"{key}={getattr(self, key)}" for key in ["num_features", "eps", "momentum"]])
 
+
+if MAIN:
+    tests.test_batchnorm2d_module(BatchNorm2d)
+    tests.test_batchnorm2d_forward(BatchNorm2d)
+    tests.test_batchnorm2d_running_mean(BatchNorm2d)
+
+# %%
 
 class AveragePool(nn.Module):
     def forward(self, x: t.Tensor) -> t.Tensor:
@@ -372,31 +383,27 @@ class ResNet34(nn.Module):
 
 if MAIN:
     my_resnet = ResNet34()
-    pretrained_resnet = torchvision.models.resnet34()
 
 # %%
 
-def copy_weights(myresnet: ResNet34, pretrained_resnet: torchvision.models.resnet.ResNet) -> ResNet34:
+def copy_weights(my_resnet: ResNet34, pretrained_resnet: torchvision.models.resnet.ResNet) -> ResNet34:
     '''Copy over the weights of `pretrained_resnet` to your resnet.'''
-
-    mydict = myresnet.state_dict()
+    
+    mydict = my_resnet.state_dict()
     pretraineddict = pretrained_resnet.state_dict()
-
-    # Check the number of params/buffers is correct
-    assert len(mydict) == len(pretraineddict), "Number of layers is wrong. Have you done the prev step correctly?"
-
-    # Initialise an empty dictionary to store the correct key-value pairs
+    assert len(mydict) == len(pretraineddict)
+    
     state_dict_to_load = {}
-
     for (mykey, myvalue), (pretrainedkey, pretrainedvalue) in zip(mydict.items(), pretraineddict.items()):
         state_dict_to_load[mykey] = pretrainedvalue
-
-    myresnet.load_state_dict(state_dict_to_load)
-
-    return myresnet
+    
+    my_resnet.load_state_dict(state_dict_to_load)
+    
+    return my_resnet
 
 if MAIN:
-    myresnet = copy_weights(my_resnet, pretrained_resnet)
+    pretrained_resnet = torchvision.models.resnet34(pretrained=True)
+    my_resnet = copy_weights(my_resnet, pretrained_resnet)
 
 # %%
 
@@ -430,7 +437,7 @@ if MAIN:
 
 # %%
 
-def prepare_data(images: List[PIL.Image.Image]) -> t.Tensor:
+def prepare_data(images: List[Image.Image]) -> t.Tensor:
     '''
     Return: shape (batch=len(images), num_channels=3, height=224, width=224)
     '''
@@ -439,5 +446,76 @@ def prepare_data(images: List[PIL.Image.Image]) -> t.Tensor:
 
 if MAIN:
     prepared_images = prepare_data(images)
+
+# %%
+
+def predict(model, images):
+    logits = model(images)
+    return logits.argmax(dim=1)
+
+# %%
+
+with open("imagenet_labels.json") as f:
+    imagenet_labels = list(json.load(f).values())
+
+# %%
+
+if MAIN:
+    my_predictions = predict(my_resnet, prepared_images)
+    pretrained_predictions = predict(pretrained_resnet, prepared_images)
+
+    assert all(my_predictions == pretrained_predictions)
+
+# %%
+
+if MAIN:
+    for img, label in zip(images, my_predictions):
+        print(f"Class {label}: {imagenet_labels[label]}")
+        display(img)
+        print()
+
+# %%
+
+# Example debugging a NaN model:
+
+class NanModule(nn.Module):
+    def forward(self, x):
+        return t.full_like(x, float('nan'))
+
+model = nn.Sequential(
+    nn.Identity(),
+    NanModule(),
+    nn.Identity()
+)
+
+def hook_check_for_nan_output(module: nn.Module, input: Tuple[t.Tensor], output: t.Tensor) -> None:
+    if t.isnan(output).any():
+        raise ValueError(f"NaN output from {module}")
+
+def add_hook(module: nn.Module) -> None:
+    '''
+    Register our hook function in a module.
+
+    Use model.apply(add_hook) to recursively apply the hook to model and all submodules.
+    '''
+    module.register_forward_hook(hook_check_for_nan_output)
+
+def remove_hooks(module: nn.Module) -> None:
+    '''
+    Remove all hooks from module.
+
+    Use module.apply(remove_hooks) to do this recursively.
+    '''
+    module._backward_hooks.clear()
+    module._forward_hooks.clear()
+    module._forward_pre_hooks.clear()
+
+if MAIN:
+    model.apply(add_hook)
+
+    input = t.randn(3)
+    output = model(input)
+
+    model.apply(remove_hooks)
 
 # %%

@@ -5,13 +5,16 @@ from st_dependencies import *
 styling()
 
 def section_home():
+    st.markdown(r"""
+Links to Colab: [**exercises**](https://colab.research.google.com/drive/1N1Cu13q4dk2Z0qYgdy7Cnb6ESAlOu5ge?usp=sharing), [**solutions**](https://colab.research.google.com/drive/1obMRz1Y9iXrJbQBXaYCBS61S-mxOIhWO?usp=sharing).
+""")
     st_image("resnet.png", 350)
     st.markdown(r"""
 # ResNets & Model Training
 
 ## 1️⃣ Building & training a CNN
 
-In part 1, we'll use the modules that we defined in part 3's exercises to build a basic CNN to classify MNIST images. We'll understand the basics of `Datasets` and `DataLoaders`, see how a basic training loop works, and also measure our model's accuracy on a test set.
+In part 1, we'll use the modules that we defined in previous exercises to build a basic CNN to classify MNIST images. We'll understand the basics of `Datasets` and `DataLoaders`, see how a basic training loop works, and also measure our model's accuracy on a test set.
 
 This section should take **2-3 hours**.
 
@@ -60,19 +63,21 @@ def section_cnn():
 
 ```python
 import torch as t
+from torch import nn
+from einops import rearrange
+from dataclasses import dataclass
 import torchvision
 from torchvision import datasets, transforms
 from torch.utils.data import DataLoader, Subset
-from dataclasses import dataclass
-import PIL
-from PIL import Image
-import json
-from typing import Union, Tuple, Callable, Optional
-import plotly.graph_objects as go
-import plotly.express as px
-from plotly.subplots import make_subplots
 from tqdm import tqdm
+from typing import List, Callable, Tuple
+from PIL import Image
+import plotly.express as px
 from IPython.display import display
+import torchinfo
+import json
+
+from part2_cnns_solutions import ReLU, Conv2d, MaxPool2d, Flatten, Linear
 
 import part4_resnets_utils as utils
 import part4_resnets_tests as tests
@@ -83,10 +88,11 @@ import part4_resnets_tests as tests
 We'll be attempting to build the following neural network architecture:
 """)
 
-    st_image('mnist_diagram.png', width=900)
+    st_image('mnist_diagram.png', width=750)
 
     st.markdown(r"""
 Let's briefly discuss this architecture. We see that it starts with two consecutive stacks of:
+
 * 2D convolution,
 * ReLU activation function,
 * 2x2 Max pooling
@@ -97,7 +103,8 @@ Then, we use a `Flatten` (recall the question from yesterday's exercises - we on
 
 Our network is doing MNIST classification, so this output should represent (in some sense) the strength of our evidence that the input is some particular digit. We can get a prediction by taking the max across this output layer.
 
-We can also represent this network using a diagram:""")
+We can also represent this network using a diagram:
+""")
 
     st.write(r"""<figure style="max-width:150px"><embed type="image/svg+xml" src="https://mermaid.ink/svg/pako:eNp9kUFrwzAMhf-K8bmF1RkjhNFLtsEg60rKTnEPaqw2BscOjj0ySv_77GSFlI35IJ7QJz14PtPaCKQZPVnoGlKUXPf-MDWc5psNp1yT8F5151011seDXbN0YOmeLJdrkhv9WSVDMoo4SxipG9AaVR_bLQgh9YmsJrxE5asSi4-pbWHojFEVGxh5g2EbdFzaOSsFEjZBdbjMbjwe7kn-l8dsd-bHfhsm_zu-KHAO9agLqRGrWMFGcsVSYrwLSfT7KzAf391O370jXKMWdEFbtC1IEfI-x1g5dQ22yGkWpMAjeOVi4JeA-k6Aw2chnbE0O4LqcUHBO7P70jXNnPV4hZ4khB9rf6jLN9JgmcE" /></figure>""", unsafe_allow_html=True)
 
@@ -191,11 +198,7 @@ if MAIN:
 
 Before we use this model to make any predictions, we first need to think about our input data. Below is a block of code to fetch and process MNIST data. We will go through it line by line.
 
-
 ```python
-from torchvision import datasets, transforms
-from torch.utils.data import DataLoader
-
 def get_mnist(subset: int = 10):
     '''Returns MNIST training data, sampled by the frequency given in `subset`.'''
     mnist_transform = transforms.Compose([
@@ -265,7 +268,7 @@ A note about batch size - it's common to see batch sizes which are powers of two
 You should play around with the objects defined above (i.e. `mnist_trainset` and `mnist_trainloader`) until you have a good feel for how they work. You should also answer the questions below before proceeding.
 """)
 
-    with st.expander("Question - can you explain why we include a data normalization function in torchvision.transforms?"):
+    with st.expander(r"Question - can you explain why we include a data normalization function in torchvision.transforms?"):
         st.markdown(r"""One consequence of unnormalized data is that you might find yourself stuck in a very flat region of the domain, and gradient descent may take much longer to converge.""")
     
         st.info(r"""Normalization isn't strictly necessary for this reason, because any rescaling of an input vector can be effectively undone by the network learning different weights and biases. But in practice, it does usually help speed up convergence.""")
@@ -281,7 +284,8 @@ You should play around with the objects defined above (i.e. `mnist_trainset` and
     with st.expander(r"""Question - what is the benefit of using shuffle=True? i.e. what might the problem be if we didn't do this?"""):
         st.markdown(r"""Shuffling is done during the training to make sure we aren't exposing our model to the same cycle (order) of data in every epoch. It is basically done to ensure the model isn't adapting its learning to any kind of spurious pattern.""")
 
-    st.markdown(r"""### Aside - `tqdm`
+    st.markdown(r"""
+### Aside - `tqdm`
 
 You might have seen some blue progress bars running when you first downloaded your MNIST data. These were generated using a library called `tqdm`, which is also a really useful tool when training models or running any process that takes a long period of time. 
 
@@ -397,17 +401,19 @@ def train_convnet(args: ConvNetTrainingArgs) -> list:
 
 
 if MAIN:
-    args = ConvNetTrainingArgs(mnist_trainset, mnist_testset)
+    args = ConvNetTrainingArgs(mnist_trainset, mnist_testset, epochs=2)
     loss_list = train_convnet(args)
 
     px.line(
-        y=loss_list, 
-        title="Training loss for CNN, on MNIST data",
-        labels={"x": "Batch number", "y": "Cross entropy loss"}
+        y=loss_list, x=range(0, len(loss_list)*args.batch_size, args.batch_size),
+        labels={"y": "Cross entropy loss", "x": "Num images seen"}, 
+        title="MNIST training curve (cross entropy loss)", template="ggplot2"
+    ).update_layout(
+        showlegend=False, yaxis_range=[0, max(loss_list)*1.1], height=400, width=600
     ).show()
 ```
 
-You should find the results to be a great deal better than the results we got from the previous exercise (with much less data, and a much smaller model).
+You should find the results to be much better than the results we got from our earlier models. It might take longer to get to the same loss, but it will eventually get much lower than the previous model would be able to.
 
 ---
 
@@ -474,13 +480,17 @@ if MAIN:
 
     px.line(
         y=loss_list, x=range(0, len(loss_list)*args.batch_size, args.batch_size),
-        title="Training loss for CNN, on MNIST data",
-        labels={"x": "Num images seen", "y": "Cross entropy loss"}, template="seaborn"
+        labels={"y": "Cross entropy loss", "x": "Num images seen"}, 
+        title="MNIST training curve (cross entropy loss)", template="ggplot2"
+    ).update_layout(
+        showlegend=False, yaxis_range=[0, max(loss_list)*1.1], height=400, width=600
     ).show()
+
     px.line(
         y=accuracy_list, x=range(1, len(accuracy_list)+1),
         title="Training accuracy for CNN, on MNIST data",
-        labels={"x": "Epoch", "y": "Accuracy"}, template="ggplot2"
+        labels={"x": "Epoch", "y": "Accuracy"}, template="seaborn", 
+        height=400, width=600
     ).show()
 ```
 """)
@@ -560,6 +570,7 @@ def section_resnet():
 ## Table of Contents
 
 <ul class="contents">
+    <li><a class="contents-el" href="#reading">Reading</a></li>
     <li><a class="contents-el" href="#some-final-modules">Some final modules</a></li>
     <li><ul class="contents">
         <li><a class="contents-el" href="#nn-sequential">Sequential</a></li>
@@ -576,13 +587,16 @@ def section_resnet():
         <li><a class="contents-el" href="#resnet34">ResNet34</a></li>
     </li></ul>
     <li><a class="contents-el" href="#running-your-model">Running Your Model</a></li>
+    <li><ul class="contents">
+        <li><a class="contents-el" href="#aside-hooks">Aside - hooks</a></li>
+    </li></ul>
 </ul>
 """, unsafe_allow_html=True)
 
     st.markdown(r"""
 # Assembling ResNet
 
-Reading:
+## Reading
 
 * [Batch Normalization in Convolutional Neural Networks](https://www.baeldung.com/cs/batch-normalization-cnn)
 * [Deep Residual Learning for Image Recognition](https://arxiv.org/pdf/1512.03385.pdf)
@@ -707,6 +721,64 @@ if MAIN:
     tests.test_batchnorm2d_running_mean(BatchNorm2d)
 ```
 """)
+        with st.expander("Solution"):
+            st.markdown(r"""
+```python
+class BatchNorm2d(nn.Module):
+    running_mean: t.Tensor         # shape: (num_features,)
+    running_var: t.Tensor          # shape: (num_features,)
+    num_batches_tracked: t.Tensor  # shape: ()
+
+    def __init__(self, num_features: int, eps=1e-05, momentum=0.1):
+        '''Like nn.BatchNorm2d with track_running_stats=True and affine=True.
+
+        Name the learnable affine parameters `weight` and `bias` in that order.
+        '''
+        super().__init__()
+        self.num_features = num_features
+        self.eps = eps
+        self.momentum = momentum
+        
+        self.weight = nn.Parameter(t.ones(num_features))
+        self.bias = nn.Parameter(t.zeros(num_features))
+        
+        self.register_buffer("running_mean", t.zeros(num_features))
+        self.register_buffer("running_var", t.ones(num_features))
+        self.register_buffer("num_batches_tracked", t.tensor(0))
+
+    def forward(self, x: t.Tensor) -> t.Tensor:
+        '''Normalize each channel.
+
+        Compute the variance using `torch.var(x, unbiased=False)`
+        Hint: you may also find it helpful to use the argument `keepdim`.
+
+        x: shape (batch, channels, height, width)
+        Return: shape (batch, channels, height, width)
+        '''
+        
+        # Calculating mean and var over all dims except for the channel dim
+        if self.training:
+            # Using keepdim=True so we don't have to worry about broadasting them with x at the end
+            mean = t.mean(x, dim=(0, 2, 3), keepdim=True)
+            var = t.var(x, dim=(0, 2, 3), unbiased=False, keepdim=True)
+            # Updating running mean and variance, in line with PyTorch documentation
+            self.running_mean = (1 - self.momentum) * self.running_mean + self.momentum * mean.squeeze()
+            self.running_var = (1 - self.momentum) * self.running_var + self.momentum * var.squeeze()
+            self.num_batches_tracked += 1
+        else:
+            mean = rearrange(self.running_mean, "channels -> 1 channels 1 1")
+            var = rearrange(self.running_var, "channels -> 1 channels 1 1")
+        
+        # Rearranging these so they can be broadcasted (although there are other ways you could do this)
+        weight = rearrange(self.weight, "channels -> 1 channels 1 1")
+        bias = rearrange(self.bias, "channels -> 1 channels 1 1")
+        
+        return ((x - mean) / t.sqrt(var + self.eps)) * weight + bias
+
+    def extra_repr(self) -> str:
+        return ", ".join([f"{key}={getattr(self, key)}" for key in ["num_features", "eps", "momentum"]])
+```
+""")
     st.markdown(r"""
 ### AveragePool
 
@@ -782,7 +854,8 @@ Similarly, `BlockGroup` is nested multiple times (four to be precise) in the ful
     #     end
     # end
 
-    st.markdown(r"""
+    with st.columns(1)[0]:
+        st.markdown(r"""
 ### Residual Block
 
 Implement `ResidualBlock` by referring to the diagram. 
@@ -794,37 +867,26 @@ The right branch being `OPTIONAL` means that its behaviour depends on the `first
 * If `first_stride=1`, this branch is just the identity operator, in other words it's a simple skip connection. Using `nn.Identity` might be useful here.
 * If `first_stride>1`, this branch includes a convolutional layer with stride equal to `first_stride`, and a `BatchNorm` layer. This is also used as the stride of the **Strided Conv** in the left branch.""")
 
-    with st.expander(r"""Question - why does the first_stride argument apply to only the first conv layer in the left branch, rather than to both convs in the left branch?"""):
-        st.markdown(r"""This is to make sure that the size of the left and right branches are the same. If the `first_stride` argument applied to both left convs then the input would be downsampled too much so it would be smaller than the output of the right branch.
+        with st.expander(r"""Question - why does the first_stride argument apply to only the first conv layer in the left branch, rather than to both convs in the left branch?"""):
+            st.markdown(r"""This is to make sure that the size of the left and right branches are the same. If the `first_stride` argument applied to both left convs then the input would be downsampled too much so it would be smaller than the output of the right branch.
     
 It's important for the size of the output of the left and right tracks to be the same, because they're added together at the end.""")
 
-    with st.expander(r"""Help - I'm completely stuck on parts of the architecture."""):
-        st.markdown(r"""In this case, you can use the following code to import your own `resnet34`, and inspect its architecture:
+        with st.expander(r"""Help - I'm completely stuck on parts of the architecture."""):
+            st.markdown(r"""In this case, you can use the following code to import your own `resnet34`, and inspect its architecture:
 
 ```python
 if MAIN:
-    from torchvision.models import resnet34
-
-    model = resnet34()
-
-    print(model)
+    resnet = torchvision.models.resnet34()
+    print(torchinfo.summary(resnet, input_size=(1, 3, 64, 64)))
 ```
 
-This will generate output that looks like:
+This will generate output telling you the names of each module, as well as the parameter counts.
 
-```
-ResNet(
-  (conv1): Conv2d(3, 64, kernel_size=(7, 7), stride=(2, 2), padding=(3, 3), bias=False)
-  (bn1): BatchNorm2d(64, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
-  (relu): ReLU(inplace=True)
-```
-
-which you can compare against the output of your own model.
+Unfortunately, this function won't work on your own model if your model breaks when an image is passed through. Since a lot of the time mistakes in the architecture will mean your model doesn't work, you won't be able to use `torchinfo.summary` on your model. Instead, you should compare the models by printing them out.
 """)
 
-    st.markdown(r"""
-
+        st.markdown(r"""
 ```python
 class ResidualBlock(nn.Module):
     def __init__(self, in_feats: int, out_feats: int, first_stride=1):
@@ -845,7 +907,55 @@ class ResidualBlock(nn.Module):
         '''
         pass
 ```
+""")
+        with st.expander("Solution"):
+            st.markdown(r"""
+```python
+class ResidualBlock(nn.Module):
+    def __init__(self, in_feats: int, out_feats: int, first_stride=1):
+        '''A single residual block with optional downsampling.
 
+        For compatibility with the pretrained model, declare the left side branch first using a `Sequential`.
+
+        If first_stride is > 1, this means the optional (conv + bn) should be present on the right branch. Declare it second using another `Sequential`.
+        '''
+        super().__init__()
+        
+        self.left = Sequential(
+            Conv2d(in_feats, out_feats, kernel_size=3, stride=first_stride, padding=1),
+            BatchNorm2d(out_feats),
+            ReLU(),
+            Conv2d(out_feats, out_feats, kernel_size=3, stride=1, padding=1),
+            BatchNorm2d(out_feats)
+        )
+        
+        if first_stride > 1:
+            self.right = Sequential(
+                Conv2d(in_feats, out_feats, kernel_size=1, stride=first_stride),
+                BatchNorm2d(out_feats)
+            )
+        else:
+            self.right = nn.Identity()
+            
+        self.relu = ReLU()
+
+    def forward(self, x: t.Tensor) -> t.Tensor:
+        '''Compute the forward pass.
+
+        x: shape (batch, in_feats, height, width)
+
+        Return: shape (batch, out_feats, height / stride, width / stride)
+
+        If no downsampling block is present, the addition should just add the left branch's output to the input.
+        '''
+        x_left = self.left(x)
+        x_right = self.right(x)
+        return self.relu(x_left + x_right)
+```
+""")
+
+    with st.columns(1)[0]:
+        st.markdown(r"""
 ### BlockGroup
 
 Implement `BlockGroup` according to the diagram. 
@@ -870,13 +980,39 @@ class BlockGroup(nn.Module):
         '''
         pass
 ```
+""")
+        with st.expander("Solution"):
+            st.markdown(r"""
+```python
+class BlockGroup(nn.Module):
+    def __init__(self, n_blocks: int, in_feats: int, out_feats: int, first_stride=1):
+        '''An n_blocks-long sequence of ResidualBlock where only the first block uses the provided stride.'''
+        super().__init__()
+        
+        blocks = [ResidualBlock(in_feats, out_feats, first_stride)] + [
+            ResidualBlock(out_feats, out_feats) for n in range(n_blocks - 1)
+        ]
+        self.blocks = nn.Sequential(*blocks)
+        
+    def forward(self, x: t.Tensor) -> t.Tensor:
+        '''Compute the forward pass.
+        x: shape (batch, in_feats, height, width)
 
+        Return: shape (batch, out_feats, height / first_stride, width / first_stride)
+        '''
+        return self.blocks(x)
+```
+""")
+    with st.columns(1)[0]:
+        st.markdown(r"""
 ### ResNet34
 
-Last step! Assemble `ResNet34` using the diagram.""")
+Last step! Assemble `ResNet34` using the diagram.
+""")
 
-    with st.expander(r"""Help - I'm not sure how to construct each of the BlockGroups."""):
-        st.markdown(r"""Each BlockGroup takes arguments `n_blocks`, `in_feats`, `out_feats` and `first_stride`. In the initialisation of `ResNet34` below, we're given a list of `n_blocks`, `out_feats` and `first_stride` for each of the BlockGroups. To find `in_feats` for each block, it suffices to note two things:
+        with st.expander(r"""Help - I'm not sure how to construct each of the BlockGroups."""):
+            st.markdown(r"""
+Each BlockGroup takes arguments `n_blocks`, `in_feats`, `out_feats` and `first_stride`. In the initialisation of `ResNet34` below, we're given a list of `n_blocks`, `out_feats` and `first_stride` for each of the BlockGroups. To find `in_feats` for each block, it suffices to note two things:
     
 1. The first `in_feats` should be 64, because the input is coming from the convolutional layer with 64 output channels.
 2. The `out_feats` of each layer should be equal to the `in_feats` of the subsequent layer (because the BlockGroups are stacked one after the other; with no operations in between to change the shape).
@@ -884,10 +1020,13 @@ Last step! Assemble `ResNet34` using the diagram.""")
 You can use these two facts to construct a list `in_features_per_group`, and then create your BlockGroups by zipping through all four lists.
 """)
 
-    with st.expander(r"""Help - I'm not sure how to construct the 7x7 conv at the very start."""):
-        st.markdown(r"""All the information about this convolution is given in the diagram, except for `in_channels`. Recall that the input to this layer is an RGB image. Can you deduce from this how many input channels your layer should have?""")
+        with st.expander(r"""Help - I'm not sure how to construct the 7x7 conv at the very start."""):
+            st.markdown(r"""
+All the information about this convolution is given in the diagram, except for `in_channels`. Recall that the input to this layer is an RGB image. Can you deduce from this how many input channels your layer should have?
+""")
 
-    st.markdown(r"""```python
+        st.markdown(r"""
+```python
 class ResNet34(nn.Module):
     def __init__(
         self,
@@ -909,38 +1048,67 @@ class ResNet34(nn.Module):
 
 if MAIN:
     my_resnet = ResNet34()
-    pretrained_resnet = torchvision.models.resnet34()
 ```
+""")
+        with st.expander("Solution"):
+            st.markdown(r"""
+```python
+class ResNet34(nn.Module):
+    def __init__(
+        self,
+        n_blocks_per_group=[3, 4, 6, 3],
+        out_features_per_group=[64, 128, 256, 512],
+        first_strides_per_group=[1, 2, 2, 2],
+        n_classes=1000,
+    ):
+        super().__init__()
+        in_feats0 = 64
 
-Now that you've built your `ResNet34`, we'll copy weights over from PyTorch's pretrained resnet to yours. This is a good way to verify that you've designed the architecture correctly (since this won't work otherwise).
+        self.in_layers = Sequential(
+            Conv2d(3, in_feats0, kernel_size=7, stride=2, padding=3),
+            BatchNorm2d(in_feats0),
+            ReLU(),
+            MaxPool2d(kernel_size=3, stride=2, padding=1),
+        )
 
-You can access PyTorch's resnet using `torchvision.models.resnet34`. When you're copying over weights, make sure to use `weights="DEFAULT"`, otherwise you'll get a network with randomly initialised weights.
+        all_in_feats = [in_feats0] + out_features_per_group[:-1]
+        self.residual_layers = Sequential(
+            *(
+                BlockGroup(*args)
+                for args in zip(
+                    n_blocks_per_group,
+                    all_in_feats,
+                    out_features_per_group,
+                    first_strides_per_group,
+                )
+            )
+        )
+        # Alternative that uses `add_module`, in a way which makes the layer names line up:
+        # for idx, (n_blocks, in_feats, out_feats, first_stride) in enumerate(zip(
+        #     n_blocks_per_group, all_in_feats, out_features_per_group, strides_per_group
+        # )):
+        #     self.add_module(f"layer{idx+1}", BlockGroup(n_blocks, in_feats, out_feats, first_stride))
 
-In order to make sure there is a 1-1 correspondence between your model and PyTorch's model, you should use the `state_dict()` method on your models. This method returns an `OrderedDict` (documentation [here](https://realpython.com/python-ordereddict/)) of all the parameter/buffer names and their values. Things you should check for:
+        self.out_layers = Sequential(
+            AveragePool(),
+            Flatten(),
+            Linear(out_features_per_group[-1], n_classes),
+        )
 
-* Does the number of named params/buffers with your model equal the number for PyTorch's model?
-    * If not, compare the two lists of named params/buffers, and see if you can spot where they differ. This might be difficult because your names and PyTorch's names might not be exactly the same, but they should be broadly similar if you've implemented your functions in a sensible way.
-* Do the names seem to approximately match up with each other?
-    * Again, there won't be an exact matching. For instance, you might find that your names are longer than PyTorch's names if you used `Sequential` blocks where PyTorch's implementation didn't). However, they should still be similar. Specific things to check for include:
-        * The PyTorch equivalents of `BlockGroup` are named `layer1`, `layer2`, etc (this should be apparent from the output of `torchvision.models.resnet34().state_dict()`). Do the places where the layer number changes match up with yours?
-        * If you named the buffers in your `BatchNorm2d` module correctly, then you should see your `running_mean` and `running_var` line up with the `running_mean` and `running_var` for the PyTorch model.
-    * One helpful way to compare the names of your model and PyTorch's model is to display them side by side, as columns in a dataframe. If you get stuck, you can use `utils.print_param_count`, which should print out a color-coded dataframe that helps you compare parameter counts. You can look in `part4_resnets_utils.py` to see how this function works (basically it constructs the dataframe by looping over `model.state_dict()`). You should produce output which looks like this (save for possibly different layer names in the first column):
-        ```python
-        utils.print_param_count(my_resnet, pretrained_resnet)
-        ```
+    def forward(self, x: t.Tensor) -> t.Tensor:
+        '''
+        x: shape (batch, channels, height, width)
+        Return: shape (batch, n_classes)
+        '''
+        x = self.in_layers(x)
+        x = self.residual_layers(x)
+        x = self.out_layers(x)
+        return x
+```
 """)
 
-    st_image('resnet-compared.png', width=900)
-
-    st.info(r"""
-I just want to emphasise that this task is meant to be really difficult! If you're able to implement this then that's amazing, but if you've been trying for a while without making much progress you should definitely move on. Alternatively, you can ping me (Callum) on Slack with screenshots of your model and I can help with troubleshooting. In the meantime, you can proceed with the rest of the exercises using PyTorch's implementation.
-""")
-
-    st.markdown(r"""One you've verified the 1-1 correspondence between your model and PyTorch's, you can make an `OrderedDict` from your model and PyTorch's model, then pass it into the `load_state_dict` method to get the right weights into your model. Note that you can also just use a regular Python `dict`, because since Python 3.7, the builtin `dict` is guaranteed to maintain items in the order they're inserted.
-
-This is designed to be pretty tedious, so once you've attempted it for a while, you may want to read the solutions.""")
-
-    st.markdown(r"""Once you've verified that your model's layers match up with PyTorch's implementation, you can copy the weights across using the function below (make sure you understand how it works before proceeding).
+    st.markdown(r"""
+Now that you've built your `ResNet34`, we'll copy weights over from PyTorch's pretrained resnet to yours. This is a good way to verify that you've designed the architecture correctly.
 
 ```python
 def copy_weights(my_resnet: ResNet34, pretrained_resnet: torchvision.models.resnet.ResNet) -> ResNet34:
@@ -948,13 +1116,9 @@ def copy_weights(my_resnet: ResNet34, pretrained_resnet: torchvision.models.resn
     
     mydict = my_resnet.state_dict()
     pretraineddict = pretrained_resnet.state_dict()
+    assert len(mydict) == len(pretraineddict)
     
-    # Check the number of params/buffers is correct
-    assert len(mydict) == len(pretraineddict), "Number of layers is wrong. Have you done the prev step correctly?"
-    
-    # Initialise an empty dictionary to store the correct key-value pairs
     state_dict_to_load = {}
-    
     for (mykey, myvalue), (pretrainedkey, pretrainedvalue) in zip(mydict.items(), pretraineddict.items()):
         state_dict_to_load[mykey] = pretrainedvalue
     
@@ -964,8 +1128,25 @@ def copy_weights(my_resnet: ResNet34, pretrained_resnet: torchvision.models.resn
 
 
 if MAIN:
+    pretrained_resnet = torchvision.models.resnet34(pretrained=True)
     my_resnet = copy_weights(my_resnet, pretrained_resnet)
 ```
+
+This function uses the `state_dict()` method, which returns an  `OrderedDict` (documentation [here](https://realpython.com/python-ordereddict/)) object containing all the parameter/buffer names and their values. State dicts can be extracted from models, saved to your filesystem (this is a common way to store the results of training a model), and can also be loaded back into a model using the `load_state_dict` method. (Note that you can also load weights using a regular Python `dict`, but since Python 3.7, the builtin `dict` is guaranteed to maintain items in the order they're inserted.)
+
+If the copying fails, this means that your model's layers don't match up with the layers in the PyTorch model implementation.
+
+To debug here, we've given you a helpful function `utils.print_param_count`, which takes one or more models (as `*args`) and prints out a stylized dataframe comparing the parameter names and shapes of each model. It will tell you when your model matches up with the PyTorch implementation. It can be used as follows:
+
+```python
+utils.print_param_count(my_resnet, pretrained_resnet)
+```
+""")
+
+    st_image('resnet-compared.png', width=900)
+
+    st.markdown(r"""
+Tweaking your model until all the layers match up might be a difficult and frustrating exercise at times! However, it's a pretty good example of the kind of low-level model implementation and debugging that is important for your growth as ML engineers. We'll be doing a few more model-building exercises similar to these in later sections.
 
 ## Running Your Model
 
@@ -988,7 +1169,7 @@ if MAIN:
 
     IMAGE_FOLDER = "./resnet_inputs"
 
-    images = [Image.open(IMAGE_FOLDER / filename) for filename in IMAGE_FILENAMES]
+    images = [Image.open(f"{IMAGE_FOLDER}/{filename}") for filename in IMAGE_FILENAMES]
 ```
 
 Our `images` are of type `PIL.Image.Image`, so we can just call them in a cell to display them.
@@ -1000,14 +1181,29 @@ images[0]
 
     st_image('chimpanzee.jpg', width=500)
 
-    st.markdown(r"""We now need to define a `transform` object like we did for MNIST. We will use the same transforms to convert the PIL image to a tensor, and to normalize it. But we also want to resize the images to `height=224, width=224`, because not all of them start out with this size and we need them to be consistent before passing them through our model. You should use `transforms.Resize` for this. Note that you should apply this resize to a tensor, not to the PIL image.
+    with st.columns(1)[0]:
+        st.markdown(r"""
+#### Exercise - prepare the data
+
+We now need to define a `transform` object like we did for MNIST. We will use the same transforms to convert the PIL image to a tensor, and to normalize it. But we also want to resize the images to `height=224, width=224`, because not all of them start out with this size and we need them to be consistent before passing them through our model. You should use `transforms.Resize` for this. Note that you should apply this resize to a tensor, not to the PIL image.
 
 In the normalization step, we'll use a mean of `[0.485, 0.456, 0.406]`, and a standard deviation of `[0.229, 0.224, 0.225]`. Note that each of these values has three elements, because ImageNet contains RGB rather than monochrome images, and we're normalising over each of the three RGB channels separately.
 
 ```python
 transform = transforms.Compose([]) # fill this in as instructed
 ```
-
+""")
+        with st.expander(r"Solution"):
+            st.markdown(r"""
+```python
+transform = transforms.Compose([
+    transforms.ToTensor(),
+    transforms.Resize((224, 224)),
+    transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+])
+```
+""")
+        st.markdown(r"""
 Now, write a function to prepare the data in `images` to be fed into our model. This should involve preprocessing each image, and stacking them into a single tensor along the batch (0th) dimension.
 
 ```python
@@ -1023,8 +1219,20 @@ if MAIN:
 ```
 """)
 
-    with st.expander(r"""Help - I'm not sure how to stack the images."""):
-        st.markdown(r"""Use `t.stack`. The argument of `t.stack` should be a list of preprocessed images.""")
+        with st.expander(r"""Help - I'm not sure how to stack the images."""):
+            st.markdown(r"""Use `t.stack`. The first argument of `t.stack` should be a list of preprocessed images.""")
+
+        with st.expander(r"Solution"):
+            st.markdown(r"""
+```python
+def prepare_data(images: List[Image.Image]) -> t.Tensor:
+    '''
+    Return: shape (batch=len(images), num_channels=3, height=224, width=224)
+    '''
+    x = t.stack([transform(img) for img in images], dim=0)
+    return x
+```
+""")
 
     st.markdown(r"""Finally, we have provided you with a simple function which predicts the image's category by taking argmax over the output of the model.
 
@@ -1039,20 +1247,101 @@ You should use this function to compare your outputs to those of PyTorch's model
 ```python
 with open("imagenet_labels.json") as f:
     imagenet_labels = list(json.load(f).values())
+
+if MAIN:
+    # Check your predictions match the pretrained model's
+    my_predictions = predict(my_resnet, prepared_images)
+    pretrained_predictions = predict(pretrained_resnet, prepared_images)
+    assert all(my_predictions == pretrained_predictions)
+
+    # Print out your predictions, next to the corresponding images
+    for img, label in zip(images, my_predictions):
+        print(f"Class {label}: {imagenet_labels[label]}")
+        display(img)
+        print()
 ```
 
 If you've done everything correctly, your version should give the same classifications, and the percentages should match at least to a couple decimal places.
 
 If it does, congratulations, you've now run an entire ResNet, using barely any code from `torch.nn`! The only things we used were `nn.Module` and `nn.Parameter`.
 
-If it doesn't, congratulations, you get to practice model debugging! Don't be afraid to send a message in `#technical-questions` here if you get stuck.
+If it doesn't, you get to practice model debugging! Remember to use the `utils.print_param_count` function that was provided.
 """)
 
     with st.expander(r"""Help! My model is predicting roughly the same percentage for every category!"""):
         st.markdown(r"""This can indicate that your model weights are randomly initialized, meaning the weight loading process didn't actually take. Or, you reinitialized your model by accident after loading the weights.""")
 
     st.markdown(r"""
-In the next set of exercises, we'll dig a bit deeper into training and optimizers, and we'll end by training a ResNet from scratch on data from ImageNet.
+### Aside - hooks
+
+One problem you might have encountered is that your model outputs `NaN`s rather than actual numbers. When debugging this, it's useful to try and identify which module the error first appears in. This is a great use-case for **hooks**, which are something we'll be digging a lot more into during our mechanistic interpretability exercises later on.
+
+A hook is basically a function which you can attach to a particular `nn.Module`, which gets executed during your model's forward or backward passes. Here, we'll only consider forward hooks. A hook function's type signature is:
+
+```python
+def hook(module: nn.Module, inputs: List[t.Tensor], output: t.Tensor) -> None:
+    pass
+```
+
+The `inputs` argument is a list of the inputs to the module (often just one tensor), and the `output` argument is the output of the module. This hook gets registered to a module by calling `module.register_forward_hook(hook)`. During forward passes, the hook function will run.
+
+Here is some code which will check for `NaN`s in the output of each module, and raise a `ValueError` if it finds any. We've also given you an example tiny network which produces a `NaN` in the output of the second layer, to demonstrate it on.
+
+```python
+class NanModule(nn.Module):
+    def forward(self, x):
+        return t.full_like(x, float('nan'))
+
+model = nn.Sequential(
+    nn.Identity(),
+    NanModule(),
+    nn.Identity()
+)
+
+
+def hook_check_for_nan_output(module: nn.Module, input: Tuple[t.Tensor], output: t.Tensor) -> None:
+    if t.isnan(output).any():
+        raise ValueError(f"NaN output from {module}")
+
+
+def add_hook(module: nn.Module) -> None:
+    '''
+    Register our hook function in a module.
+
+    Use model.apply(add_hook) to recursively apply the hook to model and all submodules.
+    '''
+    module.register_forward_hook(hook_check_for_nan_output)
+
+
+def remove_hooks(module: nn.Module) -> None:
+    '''
+    Remove all hooks from module.
+
+    Use module.apply(remove_hooks) to do this recursively.
+    '''
+    module._backward_hooks.clear()
+    module._forward_hooks.clear()
+    module._forward_pre_hooks.clear()
+
+
+if MAIN:
+    model.apply(add_hook)
+    input = t.randn(3)
+    output = model(input)
+    model.apply(remove_hooks)
+```
+
+When you run this code, you should find it raising an error at the `NanModule`.
+""")
+
+    st.info(r"""
+Important - when you're working with PyTorch hooks, make sure you remember to remove them at the end of each exercise! This is a classic source of bugs, and one of the things that make PyTorch hooks so janky. When we study TransformerLens in subsequent exercises, we'll use a version of hooks that is essentially the same under the hood, but comes with quite a few quality of life improvements!
+""")
+
+    st.markdown(r"""
+---
+
+Congrats for finishing the exercises! In the next day, we'll dig a bit deeper into training and optimizers, and we'll end by training a ResNet from scratch on data from ImageNet.
 """)
  
 def section_finetune():
