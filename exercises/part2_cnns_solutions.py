@@ -13,12 +13,16 @@ import plotly.express as px
 from PIL import Image
 import functools
 
-import part2_cnns_utils as utils
+from part2_cnns_utils import display_array_as_img
 import part2_cnns_tests as tests
 
 MAIN = __name__ == "__main__"
 
-# %%
+
+
+
+
+# %% SECTION 1: EINOPS AND EINSUM
 
 def einsum_trace(mat: np.ndarray):
     '''
@@ -50,7 +54,12 @@ def einsum_outer(vec1: np.ndarray, vec2: np.ndarray):
     '''
     return einsum("i, j -> i j", vec1, vec2)
 
-# %%
+
+
+
+
+
+# %% SECTION 2: ARRAY STRIDES
 
 test_input = t.tensor(
     [[0, 1, 2, 3, 4], 
@@ -238,7 +247,12 @@ if MAIN:
     tests.test_mm(as_strided_mm)
     tests.test_mm2(as_strided_mm)
 
-# %%
+
+
+
+
+
+# %% SECTION 3: CONVOLUTIONS
 
 def conv1d_minimal(x: t.Tensor, weights: t.Tensor) -> t.Tensor:
     '''Like torch's conv1d using bias=False and all other keyword arguments left at their default values.
@@ -441,7 +455,13 @@ if MAIN:
     tests.test_conv2d(conv2d)
     tests.test_maxpool2d(maxpool2d)
 
-# %%
+
+
+
+
+
+
+# %% SECTION 4: MAKING YOUR OWN MODULES
 
 from torch import nn
 
@@ -610,7 +630,8 @@ def write_to_html(fig, filename):
     with open(f"{filename}.html", "w") as f:
         f.write(fig.to_html(full_html=False, include_plotlyjs='cdn'))
 if MAIN:
-    probs = model(img.unsqueeze(0)).squeeze().softmax(-1).detach()
+    logits = model(img.unsqueeze(0)).squeeze().detach()
+    probs = logits.softmax(-1)
 
     px.bar(
         y=probs, x=range(1, 11), height=400, width=600, template="ggplot2",
@@ -632,8 +653,8 @@ if MAIN:
 
     for i, (imgs, labels) in zip(range(NUM_BATCHES), mnist_trainloader):
         optimizer.zero_grad()
-        probs = model(imgs)
-        loss = F.cross_entropy(probs, labels)
+        logits = model(imgs)
+        loss = F.cross_entropy(logits, labels)
         loss.backward()
         optimizer.step()
         loss_list.append(loss.item())
@@ -649,7 +670,8 @@ if MAIN:
 # %%
 
 if MAIN:
-    probs = model(img.unsqueeze(0)).squeeze().softmax(-1).detach()
+    logits = model(img.unsqueeze(0)).squeeze().detach()
+    probs = logits.softmax(-1)
 
     px.bar(
         y=probs, x=range(1, 11), height=400, width=600, template="ggplot2",

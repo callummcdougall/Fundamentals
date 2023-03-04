@@ -53,6 +53,10 @@ These exercises will take you through how different optimisation algorithms work
 
 In this section, we'll look at methods for choosing hyperparameters effectively. You'll learn how to use **Weights and Biases**, a useful tool for hyperparameter search. By the end of today, you should be able to use Weights and Biases to train the ResNet you created in the last set of exercises.
 
+## 3️⃣ Lambda Labs (bonus)
+
+In this section, you'll be able to practice using Lambda Labs to run larger models. This is handy for when your computer's own GPU just isn't doing the job!
+
 """)
 
 def section_optim():
@@ -1072,7 +1076,7 @@ def train_resnet_wandb(args: ResNetTrainingArgs) -> None:
     examples_seen = 0
 
     config_dict = args.__dict__
-    wandb.init(project="part4_model_resnet", config=config_dict)
+    wandb.init(project="part5_model_resnet", config=config_dict)
 
     trainloader = DataLoader(args.trainset, batch_size=args.batch_size, shuffle=True)
     testloader = DataLoader(args.testset, batch_size=args.batch_size, shuffle=True)
@@ -1392,11 +1396,13 @@ def section_lambda():
     st.markdown(r"""
 # Lambda Labs
 
-This page provides a guide for how to get set up on Lambda Labs (with different instructions depending on your OS). Once you finish this, you should be able to run large models.
+This section provides a guide for how to get set up on Lambda Labs (with different instructions depending on your OS). Once you finish this, you should be able to run large models without having to use Colab.
 
 There is also some reading material, which provides an overview of what GPUs are and how they work, as well as some of the topics we'll be returning to in later parts of this chapter.
 
 ## Reading
+
+These two pieces of reading are both strongly recommended, but don't worry if you don't understand everything here - if this is your first time engaging with GPUs or the topics in these blog posts, it'll be hard to follow everything.
 
 * [Techniques for Training Large Neural Networks](https://openai.com/blog/techniques-for-training-large-neural-networks/)
 * [Making Deep Learning Go Brrrr From First Principles](https://horace.io/brrr_intro.html)
@@ -1407,7 +1413,7 @@ Lambda Labs is a service giving you access to higher-quality GPUs than you are l
 
 In later sections of this chapter we'll look at multi-GPU setups, but for now we'll just stick to the basics: setting up a single GPU, and SSHing into it.
 """)
-    st.error(r"""Warning - **Lambda Labs charge by the hour for GPU usage**. If you use it, make sure you remember to terminate your instances when you're done with them!""")
+    st.error(r"""Warning - **Lambda Labs charge by the hour for GPU usage** (the cheaper options are around **$1/hour**). If you use it, make sure you remember to terminate your instances when you're done with them!""")
 
     st.markdown(r"""
 ## Instructions for signing up
@@ -1420,7 +1426,8 @@ When you create it, it will automatically be downloaded. The file should have a 
 
 ## VSCode remote-ssh extension
 
-The [**remote ssh extension**](https://code.visualstudio.com/docs/remote/ssh) is very useful for abstracting away some of the messy command-line based details of SSH. You should install this extension now.""")
+The [**remote ssh extension**](https://code.visualstudio.com/docs/remote/ssh) is very useful for abstracting away some of the messy command-line based details of SSH. You should install this extension now.
+""")
 
     st_image("architecture-ssh.png", 600)
 
@@ -1458,7 +1465,8 @@ You'll see several options, some of them might be greyed out if unavailable. Pic
 
 Enter your SSH key name. Choose a region (your choice here doesn't really matter for our purposes).
 
-Once you finish this process, you should see your GPU instance is running:""")
+Once you finish this process, you should see your GPU instance is running:
+""")
 
     st_image("gpu_instance.png", 700)
     st.markdown(r"""You should also see an SSH LOGIN field, which will look something like: `ssh ubuntu@<ip-address>`.
@@ -1486,9 +1494,10 @@ Host <ip-address>
     User <user>
 ```
 
-## Connect to your instance""")
+## Connect to your instance
+""")
 
-    st.markdown(f"""Click the green button {st_image("vscode-ssh.png", 35, return_html=True)} again, and choose "Connect to Host...". Your IP address should appear as one of the hosts. Choose this option.""", unsafe_allow_html=True)
+    st.markdown(f"""Click the {st_image("vscode-ssh.png", 35, return_html=True)} button again, and choose "Connect to Host...". Your IP address should appear as one of the hosts. Choose this option.""", unsafe_allow_html=True)
     st.markdown(r"""
 A new VSCode window will open up. If you're asked if you want to install the recommended extensions for Python, click yes. If you're asked to choose an OS (Windows, Mac or Linux), choose Linux.
 
@@ -1512,12 +1521,12 @@ You'll also need to choose a Python interpreter. Choose the conda or miniconda o
 
 ## Exercise - use your GPU to speed up training loops
 
-You can now go back to your ResNet fine-tuning code from the previous section. How much of a speedup is there? Can you relate this to what you read in [Making Deep Learning Go Brrrr From First Principles](https://horace.io/brrr_intro.html)?
+You can now go back to your ResNet fine-tuning code from earlier sections. How much of a speedup is there? Can you relate this to what you read in [Making Deep Learning Go Brrrr From First Principles](https://horace.io/brrr_intro.html)?
 """)
 
-func_list = [section_home, section_optim, section_wandb] #, section_lambda]
+func_list = [section_home, section_optim, section_wandb, section_lambda]
 
-page_list = ["🏠 Home", "1️⃣ Optimizers", "2️⃣ Weights and Biases"] #, "3️⃣ Lambda Labs"]
+page_list = ["🏠 Home", "1️⃣ Optimizers", "2️⃣ Weights and Biases", "3️⃣ Lambda Labs"]
 page_dict = {name: idx for idx, name in enumerate(page_list)}
 
 def page():

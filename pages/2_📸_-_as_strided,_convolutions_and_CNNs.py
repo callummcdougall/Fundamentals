@@ -1874,7 +1874,8 @@ How well does our untrained model do on this image? Let's find out:
 
 ```python
 if MAIN:
-    probs = model(img.unsqueeze(0)).squeeze().softmax(-1).detach()
+    logits = model(img.unsqueeze(0)).squeeze().detach()
+    probs = logits.softmax(-1)
 
     px.bar(
         y=probs, x=range(1, 11), height=400, width=600, template="ggplot2",
@@ -1900,8 +1901,8 @@ if MAIN:
 
     for i, (imgs, labels) in zip(range(NUM_BATCHES), mnist_trainloader):
         optimizer.zero_grad()
-        probs = model(imgs)
-        loss = F.cross_entropy(probs, labels)
+        logits = model(imgs)
+        loss = F.cross_entropy(logits, labels)
         loss.backward()
         optimizer.step()
         loss_list.append(loss.item())

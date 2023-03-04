@@ -21,7 +21,11 @@ device = t.device("cuda" if t.cuda.is_available() else "cpu")
 
 MAIN = __name__ == "__main__"
 
-# %%
+
+
+
+
+# %% SECTION 1: OPTIMIZERS
 
 def rosenbrocks_banana(x: t.Tensor, y: t.Tensor, a=1, b=100) -> t.Tensor:
     return (a - x) ** 2 + b * (y - x**2) ** 2 + 1
@@ -336,7 +340,17 @@ class SGD:
 if MAIN:
     tests.test_sgd_param_groups(SGD)
 
-# %%
+
+
+
+
+
+
+
+
+
+
+# %% SECTION 2: WEIGHTS AND BIASES
 
 def get_cifar10(subset: int = 1):
     '''Returns CIFAR training data, sampled by the frequency given in `subset`.'''
@@ -372,7 +386,7 @@ class ResNetTrainingArgs():
     optimizer: Callable[..., t.optim.Optimizer] = t.optim.Adam
     optimizer_args: Tuple = ()
     device: str = "cuda" if t.cuda.is_available() else "cpu"
-    filename_save_model: str = "models/part4_resnet.pt"
+    filename_save_model: str = "models/part5_resnet.pt"
 
 
 def train_resnet(args: ResNetTrainingArgs) -> Tuple[list, list]:

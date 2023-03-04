@@ -495,7 +495,7 @@ if MAIN:
 ```
 """)
 
-        with st.expander(r"""Help - I get `RuntimeError: expected scalar type Float but found Byte`."""):
+        with st.expander(r"""Help - I get 'RuntimeError: expected scalar type Float but found Byte'."""):
             st.markdown(r"""
 This is commonly because one of your operations is between tensors with the wrong datatypes (e.g. `int` and `float`). Try navigating to the error line and checking your dtypes (or using VSCode's built-in debugger).
 """)
@@ -504,7 +504,7 @@ This is commonly because one of your operations is between tensors with the wron
             st.markdown(r"""
 Recall that your model's outputs are a tensor of shape `(batch_size, 10 = num_classifications)`. You can get your model's predictions using `y_predictions = y_hat.argmax(1)` (which means taking the argmax along the 1st dimension). Then, `(y_predictions == y)` will be a boolean array, and the accuracy for this epoch will be equal to the fraction of elements of this array that are `True`.
 """)
-        with st.expander("Example solution"):
+        with st.expander("Solution (one possible implementation)"):
             st.markdown(r"""
 ```python
 def train_convnet(args: ConvNetTrainingArgs) -> Tuple[list, list]:

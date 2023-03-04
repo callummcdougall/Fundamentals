@@ -22,8 +22,12 @@ import part4_resnets_utils as utils
 
 MAIN = __name__ == "__main__"
 
-# %%
 
+
+
+
+
+# %% PART 1: BUILDING & TRAINING A CNN
 class ConvNet(nn.Module):
     def __init__(self):
         super().__init__()
@@ -175,7 +179,12 @@ if MAIN:
         height=400, width=600
     ).show()
 
-# %%
+
+
+
+
+
+# %% SECTION 2: ASSEMBLING RESNET
 
 class Sequential(nn.Module):
     def __init__(self, *modules: nn.Module):

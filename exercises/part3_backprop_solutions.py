@@ -15,7 +15,9 @@ grad_tracking_enabled = True
 
 MAIN = __name__ == "__main__"
 
-# %%
+
+
+# %% SECTION 1: INTRODUCTION
 
 @dataclass(frozen=True)
 class Recipe:
@@ -284,7 +286,12 @@ def forward_and_back(a: Arr, b: Arr, c: Arr) -> Tuple[Arr, Arr, Arr]:
 if MAIN:
     tests.test_forward_and_back(forward_and_back)
 
-# %%
+
+
+
+
+
+# %% SECTION 2: AUTOGRAD
 
 class BackwardFuncLookup:
     def __init__(self) -> None:
@@ -310,7 +317,6 @@ if MAIN:
     print("Tests passed - BackwardFuncLookup class is working as expected!")
 
 # %%
-
 
 def log_forward(x: Tensor) -> Tensor:
     
@@ -571,7 +577,11 @@ if MAIN:
     tests.test_backprop_float_arg(Tensor)
 
 
-# %%
+
+
+
+
+# %% SECTION 3: MORE FORWARD & BACKWARD FUNCTIONS
 
 def _argmax(x: Arr, dim=None, keepdim=False):
     '''Like torch.argmax.'''
@@ -895,9 +905,10 @@ if MAIN:
 
 
 
-# %%
 
 
+
+# %% SECTION 4: PUTTING EVERYTHING TOGETHER
 
 class Parameter(Tensor):
     def __init__(self, tensor: Tensor, requires_grad=True):
