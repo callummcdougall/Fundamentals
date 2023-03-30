@@ -9,6 +9,7 @@ def section_home():
 Links to Colab: [**exercises**](https://colab.research.google.com/drive/1N1Cu13q4dk2Z0qYgdy7Cnb6ESAlOu5ge?usp=sharing), [**solutions**](https://colab.research.google.com/drive/1obMRz1Y9iXrJbQBXaYCBS61S-mxOIhWO?usp=sharing).
 """)
     st_image("resnet.png", 350)
+    # start
     st.markdown(r"""
 # ResNets & Model Training
 
@@ -29,6 +30,7 @@ This section should take approximately **2-3 hours**.
 Today's exercises are probably the most directly relevant for the rest of the programme out of everything we've done this week. This is because we'll be looking at important concepts like training loops and neural network architectures. Additionally, the task of assembling a complicated neural network architecture from a set of instructions will lead straight into next week, when we'll be building our own transformers! So forming a deep understanding of everything that's going on in today's exercises will be very helpful going forwards.
 
 """)
+    # end
 # ## 3️⃣ Finetuning ResNet (bonus)
 
 # If you get to part 3, this is an opportunity to try finetuning your ResNet. Finetuning involves taking a pretrained model, and training it to perform a slightly different task (sometimes altering the architecture at the end of the model, and only training that part while freezing the rest). We've given much less guidance for this section, since it builds on all the previous sections.
@@ -54,11 +56,13 @@ def section_cnn():
     </li></ul>
 </ul>
 """, unsafe_allow_html=True)
-
+    # start
     st.markdown(r"""
 
 # Building & Training a CNN
-
+""")
+    # end
+    st.markdown(r"""
 ## Imports
 
 ```python
@@ -82,14 +86,17 @@ from part2_cnns_solutions import ReLU, Conv2d, MaxPool2d, Flatten, Linear
 import part4_resnets_utils as utils
 import part4_resnets_tests as tests
 ```
-
+""")
+    # start
+    st.markdown(r"""
 ## ConvNet
 
 We'll be attempting to build the following neural network architecture:
 """)
+    # end
 
     st_image('mnist_diagram.png', width=750)
-
+    # start
     st.markdown(r"""
 Let's briefly discuss this architecture. We see that it starts with two consecutive stacks of:
 
@@ -102,7 +109,9 @@ Combining these three in this order (or more generally, convolution + activation
 Then, we use a `Flatten` (recall the question from yesterday's exercises - we only use `Flatten` after all of our convolutions, because it destroys spatial dependence). Finally, we apply two linear layers to get our output. 
 
 Our network is doing MNIST classification, so this output should represent (in some sense) the strength of our evidence that the input is some particular digit. We can get a prediction by taking the max across this output layer.
-
+""")
+    # end
+    st.markdown(r"""
 We can also represent this network using a diagram:
 """)
 
@@ -113,13 +122,17 @@ We can also represent this network using a diagram:
 which is something we'll be using a lot in future exercises, as we deal with more complicated architectures with hierarchically nested components.
 """)
     with st.columns(1)[0]:
+        # start
         st.markdown(r"""
 ### Exercise - creating `ConvNet`
 
 Although you're creating a neural network rather than a single layer, this is structurally very similar to the exercises at the end of yesterday when you created `nn.Module` objects to wrap around functions. This time, you're creating an `nn.Module` object to contain the modules of the network. 
-
+""")
+        # end
+        st.markdown(r"""
 Below `__init__`, you should define all of your modules. It's conventional to number them, e.g. `self.conv1 = Conv2d(...)` and `self.linear1 = Linear(...)` (or another common convention is `fc`, for "fully connected"). Below `forward`, you should return the value of sequentially applying all these layers to the input.
-
+""")
+        st.markdown(r"""
 ```python
 class ConvNet(nn.Module):
     def __init__(self):
@@ -136,9 +149,9 @@ if MAIN:
 
 Note - rather than defining your network this way, it would be possible to just wrap everything inside an `nn.Sequential`. For simple examples like this, both ways work just fine. However, for more complicated architectures involving nested components and multiple different branches of computation (e.g. the ResNet we'll be building later today), there will be major advantages to building your network in this way.
 """)
-
         with st.expander("Help - I'm not sure where to start."):
-            st.markdown(r"""As an example, the first thing you should define in the initialisation section is:
+            st.markdown(r"""
+As an example, the first thing you should define in the initialisation section is:
     
 ```python
 self.conv1 = Conv2d(in_channels=1, out_channels=32, kernel_size=3, stride=1, padding=1)
@@ -178,6 +191,7 @@ class ConvNet(nn.Module):
         return x
 ```
 """)
+        # start
         st.markdown(r"""
 We can also use the useful library `torchinfo` to print out a much more informative description of our model. You can use this function in two ways:
 
@@ -192,7 +206,6 @@ if MAIN:
     print(summary)
 ```
 """)
-
     st.markdown(r"""
 ## Transforms
 
@@ -219,7 +232,9 @@ if MAIN:
     mnist_trainloader = DataLoader(mnist_trainset, batch_size=64, shuffle=True)
     mnist_testloader = DataLoader(mnist_testset, batch_size=64, shuffle=True)
 ```
-
+""")
+    # end
+    st.markdown(r"""
 The `torchvision` package consists of popular datasets, model architectures, and common image transformations for computer vision. `transforms` is a library from `torchvision` which provides access to a suite of functions for preprocessing data. The three functions used here are:
 
 1. `transforms.Compose`, for stringing together multiple transforms into a sequence.
@@ -267,23 +282,41 @@ A note about batch size - it's common to see batch sizes which are powers of two
 
 You should play around with the objects defined above (i.e. `mnist_trainset` and `mnist_trainloader`) until you have a good feel for how they work. You should also answer the questions below before proceeding.
 """)
-
     with st.expander(r"Question - can you explain why we include a data normalization function in torchvision.transforms?"):
-        st.markdown(r"""One consequence of unnormalized data is that you might find yourself stuck in a very flat region of the domain, and gradient descent may take much longer to converge.""")
+        st.markdown(r"""
+One consequence of unnormalized data is that you might find yourself stuck in a very flat region of the domain, and gradient descent may take much longer to converge.
+""")
     
-        st.info(r"""Normalization isn't strictly necessary for this reason, because any rescaling of an input vector can be effectively undone by the network learning different weights and biases. But in practice, it does usually help speed up convergence.""")
+        st.info(r"""
+Normalization isn't strictly necessary for this reason, because any rescaling of an input vector can be effectively undone by the network learning different weights and biases. But in practice, it does usually help speed up convergence.
+""")
 
-        st.markdown(r"""Normalization also helps avoid numerical issues.""")
+        st.markdown(r"""
+Normalization also helps avoid numerical issues.
+""")
 
-    with st.expander(r"""Question - can you explain why we use these exact values to normalize with?"""):
-        st.markdown(r"""These values were calculated across the MNIST dataset, so that they would have approximately mean 0 and variance 1.""")
+    with st.expander(r"""
+Question - can you explain why we use these exact values to normalize with?
+"""):
+        st.markdown(r"""
+These values were calculated across the MNIST dataset, so that they would have approximately mean 0 and variance 1.
+""")
 
-    with st.expander(r"""Question - if the dataset was of full-color images, what would the shape of trainset.data be? How about trainset.targets?"""):
-        st.markdown(r"""`trainset.data` would have shape `(dataset_size, channels, height, width)` where `channels=3` represents the RGB channels. `trainset.targets` would still just be a 1D array.""")
+    with st.expander(r"""
+Question - if the dataset was of full-color images, what would the shape of trainset.data be? How about trainset.targets?
+"""):
+        st.markdown(r"""
+`trainset.data` would have shape `(dataset_size, channels, height, width)` where `channels=3` represents the RGB channels. `trainset.targets` would still just be a 1D array.
+""")
 
-    with st.expander(r"""Question - what is the benefit of using shuffle=True? i.e. what might the problem be if we didn't do this?"""):
-        st.markdown(r"""Shuffling is done during the training to make sure we aren't exposing our model to the same cycle (order) of data in every epoch. It is basically done to ensure the model isn't adapting its learning to any kind of spurious pattern.""")
+    with st.expander(r"""
+Question - what is the benefit of using shuffle=True? i.e. what might the problem be if we didn't do this?
+"""):
+        st.markdown(r"""
+Shuffling is done during the training to make sure we aren't exposing our model to the same cycle (order) of data in every epoch. It is basically done to ensure the model isn't adapting its learning to any kind of spurious pattern.
+""")
 
+    # start
     st.markdown(r"""
 ### Aside - `tqdm`
 
@@ -299,7 +332,11 @@ for i in tqdm(range(100)):
     time.sleep(0.01)
 ```
 
-`tqdm` wraps around a list, range or other iterable, but other than that it doesn't affect the structure of your loop. You can also run multiple nested progress bars, if you add the argument `leave=False` in the inner progress bar:
+`tqdm` wraps around a list, range or other iterable, but other than that it doesn't affect the structure of your loop.
+""")
+    # end
+    st.markdown(r"""
+You can also run multiple nested progress bars, if you add the argument `leave=False` in the inner progress bar:
 
 ```python
 for j in tqdm(range(5)):
@@ -325,7 +362,7 @@ for i in tqdm(enumerate(range(100))):
 
 You can fix this by putting the `enumerate` outside of the `tqdm` function, or by adding the argument `total=100` (this tells `tqdm` exactly how many objects there are to iterate through).
 """)
-
+    # start
     st.markdown(r"""
 ### Aside - `device`
 
@@ -350,7 +387,9 @@ print(device)
 ## Training loop
 
 Finally, we'll now build our training loop. The one below is actually constructed for you rather than left as an exercise, but you should make sure that you understand the purpose of every line below, because soon you'll be adding to it, and making your own training loops for different architectures.
-
+""")
+    # end
+    st.markdown(r"""
 ```python
 @dataclass
 class ConvNetTrainingArgs():
@@ -416,7 +455,9 @@ if MAIN:
 You should find the results to be much better than the results we got from our earlier models. It might take longer to get to the same loss, but it will eventually get much lower than the previous model would be able to.
 
 ---
-
+""")
+    # start
+    st.markdown(r"""
 We've seen most of these components before over the last few days. The most important lines to go over are these five:
 
 ```python
@@ -448,7 +489,9 @@ print(args)
 ```
 
 Using dataclasses, saves code, and keeps all your arguments in one easy-to-track place. Also, if you're using code autocomplete on VSCode, just typing `args.` will let you tab in the appropriate argument, which is pretty handy!
-
+""")
+    # end
+    st.markdown(r"""
 ### Other notes on this code
 
 * The `train()` method used when defining models changes the behaviour of certain types of layers, e.g. batch norm and dropout. We don't have either of these types of layers present in our model, but we'll need to use this later today when we work with ResNets.
@@ -495,12 +538,16 @@ if MAIN:
 ```
 """)
 
-        with st.expander(r"""Help - I get 'RuntimeError: expected scalar type Float but found Byte'."""):
+        with st.expander(r"""
+Help - I get 'RuntimeError: expected scalar type Float but found Byte'.
+"""):
             st.markdown(r"""
 This is commonly because one of your operations is between tensors with the wrong datatypes (e.g. `int` and `float`). Try navigating to the error line and checking your dtypes (or using VSCode's built-in debugger).
 """)
 
-        with st.expander(r"""Help - I'm not sure how to calculate accuracy."""):
+        with st.expander(r"""
+Help - I'm not sure how to calculate accuracy.
+"""):
             st.markdown(r"""
 Recall that your model's outputs are a tensor of shape `(batch_size, 10 = num_classifications)`. You can get your model's predictions using `y_predictions = y_hat.argmax(1)` (which means taking the argmax along the 1st dimension). Then, `(y_predictions == y)` will be a boolean array, and the accuracy for this epoch will be equal to the fraction of elements of this array that are `True`.
 """)
@@ -592,7 +639,7 @@ def section_resnet():
     </li></ul>
 </ul>
 """, unsafe_allow_html=True)
-
+    # start
     st.markdown(r"""
 # Assembling ResNet
 
@@ -604,27 +651,41 @@ def section_resnet():
 You should move on once you can answer the following questions:
 """)
 
-    with st.expander(r""""Batch Normalization allows us to be less careful about initialization." Explain this statement."""):
-        st.markdown(r"""Weight initialisation methods like Xavier (which we encountered yesterday) are based on the idea of making sure the activations have approximately the same distribution across layers at initialisation. But batch normalisation ensures that this is the case as signals pass through the network.""")
+    with st.expander(r""""
+Batch Normalization allows us to be less careful about initialization." Explain this statement.
+"""):
+        st.markdown(r"""
+Weight initialisation methods like Xavier (which we encountered yesterday) are based on the idea of making sure the activations have approximately the same distribution across layers at initialisation. But batch normalisation ensures that this is the case as signals pass through the network.
+""")
 
-    with st.expander(r"""Give three reasons why batch norm improves the performance of neural networks."""):
-        st.markdown(r"""The reasons given in the first linked document above are:
-    * Normalising inputs speeds up computation
+    with st.expander(r"""
+Give three reasons why batch norm improves the performance of neural networks.
+"""):
+        st.markdown(r"""
+The reasons given in the first linked document above are:
+* Normalising inputs speeds up computation
 * Internal covariate shift is reduced, i.e. the mean and standard deviation is kept constant across the layers.
-* Regularisation effect: noise internal to each minibatch is reduced""")
+* Regularisation effect: noise internal to each minibatch is reduced
+""")
 
-    with st.expander(r"""If you have an input tensor of size (batch, channels, width, height), and you apply a batchnorm layer, how many learned parameters will there be?"""):
-        st.markdown(r"""A mean and standard deviation is calculated for each channel (i.e. each calculation is done across the batch, width, and height dimensions). So the number of learned params will be `2 * channels`.""")
+    with st.expander(r"""
+If you have an input tensor of size (batch, channels, width, height), and you apply a batchnorm layer, how many learned parameters will there be?
+"""):
+        st.markdown(r"""
+A mean and standard deviation is calculated for each channel (i.e. each calculation is done across the batch, width, and height dimensions). So the number of learned params will be `2 * channels`.
+""")
 
-# with st.expander(r"""Review section 1 of the "Deep Residual Learning" paper, then answer the following question in your own words: why are ResNets a natural solution to the degradation problem?"""):
-#     st.markdown(r"""**Degradation problem** = increasing the depth of a network leads to worse performance not only on the test set, but *also the training set* (indicating that this isn't just caused by overfitting). One could argue that the deep network has the capacity to learn the shallower network as a "subnetwork" within itself; if it just sets most of its layers to the identity. However, empirically it seems to have trouble doing this. Skip connections in ResNets are a natural way to fix this problem, because they essentially hardcode an identity mapping into the network, rather than making the network learn the identity mapping.""")
+    with st.expander(r"""
+In the paper, the diagram shows additive skip connections (i.e. F(x) + x). One can also form concatenated skip connections, by "gluing together" F(x) and x into a single tensor. Give one advantage and one disadvantage of these, relative to additive connections.
+"""):
+        st.markdown(r"""
+One advantage of concatenation: the subsequent layers can re-use middle representations; maintaining more information which can lead to better performance. Also, this still works if the tensors aren't exactly the same shape. One disadvantage: less compact, so there may be more weights to learn in subsequent layers.
 
-    with st.expander(r"""In the paper, the diagram shows additive skip connections (i.e. F(x) + x). One can also form concatenated skip connections, by "gluing together" F(x) and x into a single tensor. Give one advantage and one disadvantage of these, relative to additive connections."""):
-        st.markdown(r"""One advantage of concatenation: the subsequent layers can re-use middle representations; maintaining more information which can lead to better performance. Also, this still works if the tensors aren't exactly the same shape. One disadvantage: less compact, so there may be more weights to learn in subsequent layers.
+Crucially, both the addition and concatenation methods have the property of preserving information, to at least some degree of fidelity. For instance, you can [use calculus to show](https://theaisummer.com/skip-connections/#:~:text=residual%20skip%20connections.-,ResNet%3A%20skip%20connections%C2%A0via%C2%A0addition,-The%20core%20idea) that both methods will fix the vanishing gradients problem.
+""")
 
-Crucially, both the addition and concatenation methods have the property of preserving information, to at least some degree of fidelity. For instance, you can [use calculus to show](https://theaisummer.com/skip-connections/#:~:text=residual%20skip%20connections.-,ResNet%3A%20skip%20connections%C2%A0via%C2%A0addition,-The%20core%20idea) that both methods will fix the vanishing gradients problem.""")
-
-    st.markdown(r"""In this section, we'll do a more advanced version of the exercise in part 1. Rather than building a relatively simple network in which computation can be easily represented by a sequence of simple layers, we're going to build a more complex architecture which requires us to define nested blocks.
+    st.markdown(r"""
+In this section, we'll do a more advanced version of the exercise in part 1. Rather than building a relatively simple network in which computation can be easily represented by a sequence of simple layers, we're going to build a more complex architecture which requires us to define nested blocks.
 
 ## Some final modules
 
@@ -633,7 +694,9 @@ We'll start by defining a few more `nn.Module` objects, which we hadn't needed b
 ### Sequential
 
 Firstly, now that we're working with large and complex architectures, we should create a version of `nn.Sequential`. Recall that we briefly came across `nn.Sequential` at the end of the first day, when building our (extremely simple) neural network. As the name suggests, when an `nn.Sequential` is fed an input, it sequentially applies each of its submodules to the input, with the output from one module feeding into the next one.
-
+""")
+    # end
+    st.markdown(r"""
 The implementation is given to you below. A few notes:
 
 * `self.add_module` is called on each provided module.
@@ -657,7 +720,9 @@ class Sequential(nn.Module):
             x = mod(x)
         return x
 ```
-
+""")
+    # start
+    st.markdown(r"""
 ### BatchNorm2d
 
 Now, we'll implement our `BatchNorml2d`, the layer described in the documents you hopefully read above.
@@ -680,6 +745,7 @@ In training mode, you should use the mean and variance of the batch you're on, b
 
 In eval mode, you should use the running mean and variance that you stored before (not the mean and variance from the current batch).
 """)
+    # end
 
     with st.columns(1)[0]:
         st.markdown(r"""
@@ -779,6 +845,7 @@ class BatchNorm2d(nn.Module):
         return ", ".join([f"{key}={getattr(self, key)}" for key in ["num_features", "eps", "momentum"]])
 ```
 """)
+    # start
     st.markdown(r"""
 ### AveragePool
 
@@ -788,6 +855,7 @@ The ResNet has a Linear layer with 1000 outputs at the end in order to produce c
 
 Luckily, the simplest possible solution works decently: take the mean over the spatial dimensions. Intuitively, each position has an equal "vote" for what objects it can "see".
 """)
+    # end
     with st.columns(1)[0]:
         st.markdown(r"""
 ### Exercise - implement `AveragePool`
@@ -816,22 +884,39 @@ class AveragePool(nn.Module):
         return t.mean(x, dim=(2, 3))
 ```
 """)
+    # start
     st.markdown(r"""
 ## Building ResNet
 
-Now we have all the building blocks we need to start assembling your own ResNet! The following diagram describes the architecture of ResNet34 - the other versions are broadly similar. Unless otherwise noted, convolutions have a kernel_size of 3x3, a stride of 1, and a padding of 1. None of the convolutions have biases. 
+Now we have all the building blocks we need to start assembling your own ResNet!
+""")
+    # end
+    st.markdown(r"""
+The following diagram describes the architecture of ResNet34 - the other versions are broadly similar. Unless otherwise noted, convolutions have a kernel_size of 3x3, a stride of 1, and a padding of 1. None of the convolutions have biases. 
 """)
 
-    with st.expander(r"""Question: there would be no advantage to enabling biases on the convolutional layers. Why?"""):
-        st.markdown(r"""Every convolution layer in this network is followed by a batch normalization layer. The first operation in the batch normalization layer is to subtract the mean of each output channel. But a convolutional bias just adds some scalar `b` to each output channel, increasing the mean by `b`. This means that for any `b` added, the batch normalization will subtract `b` to exactly negate the bias term.""")
+    with st.expander(r"""
+Question: there would be no advantage to enabling biases on the convolutional layers. Why?
+"""):
+        st.markdown(r"""
+Every convolution layer in this network is followed by a batch normalization layer. The first operation in the batch normalization layer is to subtract the mean of each output channel. But a convolutional bias just adds some scalar `b` to each output channel, increasing the mean by `b`. This means that for any `b` added, the batch normalization will subtract `b` to exactly negate the bias term.
+""")
 
-    with st.expander(r"""Question: why is it necessary for the output of the left and right computational tracks in ResidualBlock to be the same shape?"""):
-        st.markdown(r"""Because they're added together at the end of the tracks. If they weren't the same shape, then they couldn't be added together.""")
+    with st.expander(r"""
+Question: why is it necessary for the output of the left and right computational tracks in ResidualBlock to be the same shape?
+"""):
+        st.markdown(r"""
+Because they're added together at the end of the tracks. If they weren't the same shape, then they couldn't be added together.
+""")
 
-    with st.expander(r"""Help - I'm confused about how the nested subgraphs work."""):
-        st.markdown(r"""The right-most block in the diagram, `ResidualBlock`, is nested inside `BlockGroup` multiple times. When you see `ResidualBlock` in `BlockGroup`, you should visualise a copy of `ResidualBlock` sitting in that position. 
+    with st.expander(r"""
+Help - I'm confused about how the nested subgraphs work.
+"""):
+        st.markdown(r"""
+The right-most block in the diagram, `ResidualBlock`, is nested inside `BlockGroup` multiple times. When you see `ResidualBlock` in `BlockGroup`, you should visualise a copy of `ResidualBlock` sitting in that position. 
     
-Similarly, `BlockGroup` is nested multiple times (four to be precise) in the full `ResNet34` architecture.""")
+Similarly, `BlockGroup` is nested multiple times (four to be precise) in the full `ResNet34` architecture.
+""")
 
 
     st.write(r"""<figure style="max-width:900px"><embed type="image/svg+xml" src="https://mermaid.ink/svg/pako:eNqNU8FuozAQ_RXLZ5pCUm2laBUpLmo2UpZUlGgPJgcXTxu0YCNjV6mq_vvaODQlqbSxwAzPb2b8xuN3XEgOeIpfFGt2KItzgexozZMHcmwfjw3wFNoE9OTmuOQGLxUUupQCZWS4shSN0bSbfz6p2RZdXc0seCfFK73d3yJnuIUfN6jYMSGgagPUalVyQOOeTRJKmC52iVR1j6Ww2lA39cCDlBWd7CfoN9s720V9HAQilSz-LpQ0TUu_2I4YBigK0Gg0ClDiyfNXUOwFXKTu_75iWoPo7FUpgCnqP9b9ehaFYYik0VZm6_3XRh8rAYLn4ptqHndxaT3JYil8OX2aOCW2Cm3JDau6aE7Nn2X2C8nGBWAVapg6kFMSDsln2nvv9Sb7LgBZWFnUvtv_axskuljeUB3p-sSfIu965YCTJDptCdcLR6cxHbDHp-w5572XGX_po5ScKzzZoK97lyWm64dsuU7mK1e4aB-h873GJP7MPaCf7-ikqAcDB7gGVbOS2-v67uAc6x3UkOOpNTk8M1Npd1s_LJUZLR_fRIGnWhkIsGk40xCXzJ5KjafPrGrh4x-ZkTKg" /></figure>""", unsafe_allow_html=True)
@@ -852,7 +937,7 @@ Similarly, `BlockGroup` is nested multiple times (four to be precise) in the ful
     #         BIn[Input] --> BConv[Strided Conv] --> BBN1[BatchNorm] --> ReLU --> BConv2[Conv] --> BBN2[BatchNorm] --> Add --> ReLu2[ReLU] --> RBOut[Out]
     #                 BIn --> DBConvD[OPTIONAL<br>1x1 Strided Conv] --> DBDBatchNorm[OPTIONAL<br>BatchNorm] --> Add
     #     end
-    # end
+    # end (ended!!!)
 
     with st.columns(1)[0]:
         st.markdown(r"""
@@ -865,15 +950,23 @@ The number of channels changes from `in_feats` to `out_feats` at the first convo
 The right branch being `OPTIONAL` means that its behaviour depends on the `first_stride` argument:
 
 * If `first_stride=1`, this branch is just the identity operator, in other words it's a simple skip connection. Using `nn.Identity` might be useful here.
-* If `first_stride>1`, this branch includes a convolutional layer with stride equal to `first_stride`, and a `BatchNorm` layer. This is also used as the stride of the **Strided Conv** in the left branch.""")
+* If `first_stride>1`, this branch includes a convolutional layer with stride equal to `first_stride`, and a `BatchNorm` layer. This is also used as the stride of the **Strided Conv** in the left branch.
+""")
 
-        with st.expander(r"""Question - why does the first_stride argument apply to only the first conv layer in the left branch, rather than to both convs in the left branch?"""):
-            st.markdown(r"""This is to make sure that the size of the left and right branches are the same. If the `first_stride` argument applied to both left convs then the input would be downsampled too much so it would be smaller than the output of the right branch.
+        with st.expander(r"""
+Question - why does the first_stride argument apply to only the first conv layer in the left branch, rather than to both convs in the left branch?
+"""):
+            st.markdown(r"""
+This is to make sure that the size of the left and right branches are the same. If the `first_stride` argument applied to both left convs then the input would be downsampled too much so it would be smaller than the output of the right branch.
     
-It's important for the size of the output of the left and right tracks to be the same, because they're added together at the end.""")
+It's important for the size of the output of the left and right tracks to be the same, because they're added together at the end.
+""")
 
-        with st.expander(r"""Help - I'm completely stuck on parts of the architecture."""):
-            st.markdown(r"""In this case, you can use the following code to import your own `resnet34`, and inspect its architecture:
+        with st.expander(r"""
+Help - I'm completely stuck on parts of the architecture.
+"""):
+            st.markdown(r"""
+In this case, you can use the following code to import your own `resnet34`, and inspect its architecture:
 
 ```python
 if MAIN:
@@ -1010,7 +1103,9 @@ class BlockGroup(nn.Module):
 Last step! Assemble `ResNet34` using the diagram.
 """)
 
-        with st.expander(r"""Help - I'm not sure how to construct each of the BlockGroups."""):
+        with st.expander(r"""
+Help - I'm not sure how to construct each of the BlockGroups.
+"""):
             st.markdown(r"""
 Each BlockGroup takes arguments `n_blocks`, `in_feats`, `out_feats` and `first_stride`. In the initialisation of `ResNet34` below, we're given a list of `n_blocks`, `out_feats` and `first_stride` for each of the BlockGroups. To find `in_feats` for each block, it suffices to note two things:
     
@@ -1020,7 +1115,9 @@ Each BlockGroup takes arguments `n_blocks`, `in_feats`, `out_feats` and `first_s
 You can use these two facts to construct a list `in_features_per_group`, and then create your BlockGroups by zipping through all four lists.
 """)
 
-        with st.expander(r"""Help - I'm not sure how to construct the 7x7 conv at the very start."""):
+        with st.expander(r"""
+Help - I'm not sure how to construct the 7x7 conv at the very start.
+"""):
             st.markdown(r"""
 All the information about this convolution is given in the diagram, except for `in_channels`. Recall that the input to this layer is an RGB image. Can you deduce from this how many input channels your layer should have?
 """)
@@ -1107,9 +1204,12 @@ class ResNet34(nn.Module):
 ```
 """)
 
+    # start
     st.markdown(r"""
 Now that you've built your `ResNet34`, we'll copy weights over from PyTorch's pretrained resnet to yours. This is a good way to verify that you've designed the architecture correctly.
-
+""")
+    # end
+    st.markdown(r"""
 ```python
 def copy_weights(my_resnet: ResNet34, pretrained_resnet: torchvision.models.resnet.ResNet) -> ResNet34:
     '''Copy over the weights of `pretrained_resnet` to your resnet.'''
@@ -1131,7 +1231,9 @@ if MAIN:
     pretrained_resnet = torchvision.models.resnet34(pretrained=True)
     my_resnet = copy_weights(my_resnet, pretrained_resnet)
 ```
-
+""")
+    # start
+    st.markdown(r"""
 This function uses the `state_dict()` method, which returns an  `OrderedDict` (documentation [here](https://realpython.com/python-ordereddict/)) object containing all the parameter/buffer names and their values. State dicts can be extracted from models, saved to your filesystem (this is a common way to store the results of training a model), and can also be loaded back into a model using the `load_state_dict` method. (Note that you can also load weights using a regular Python `dict`, but since Python 3.7, the builtin `dict` is guaranteed to maintain items in the order they're inserted.)
 
 If the copying fails, this means that your model's layers don't match up with the layers in the PyTorch model implementation.
@@ -1142,6 +1244,7 @@ To debug here, we've given you a helpful function `utils.print_param_count`, whi
 utils.print_param_count(my_resnet, pretrained_resnet)
 ```
 """)
+    # end
 
     st_image('resnet-compared.png', width=900)
 
@@ -1219,8 +1322,12 @@ if MAIN:
 ```
 """)
 
-        with st.expander(r"""Help - I'm not sure how to stack the images."""):
-            st.markdown(r"""Use `t.stack`. The first argument of `t.stack` should be a list of preprocessed images.""")
+        with st.expander(r"""
+Help - I'm not sure how to stack the images.
+"""):
+            st.markdown(r"""
+Use `t.stack`. The first argument of `t.stack` should be a list of preprocessed images.
+""")
 
         with st.expander(r"Solution"):
             st.markdown(r"""
@@ -1268,9 +1375,13 @@ If it does, congratulations, you've now run an entire ResNet, using barely any c
 If it doesn't, you get to practice model debugging! Remember to use the `utils.print_param_count` function that was provided.
 """)
 
-    with st.expander(r"""Help! My model is predicting roughly the same percentage for every category!"""):
-        st.markdown(r"""This can indicate that your model weights are randomly initialized, meaning the weight loading process didn't actually take. Or, you reinitialized your model by accident after loading the weights.""")
-
+    with st.expander(r"""
+Help! My model is predicting roughly the same percentage for every category!
+"""):
+        st.markdown(r"""
+This can indicate that your model weights are randomly initialized, meaning the weight loading process didn't actually take. Or, you reinitialized your model by accident after loading the weights.
+""")
+    # start
     st.markdown(r"""
 ### Aside - hooks
 
@@ -1284,7 +1395,9 @@ def hook(module: nn.Module, inputs: List[t.Tensor], output: t.Tensor) -> None:
 ```
 
 The `inputs` argument is a list of the inputs to the module (often just one tensor), and the `output` argument is the output of the module. This hook gets registered to a module by calling `module.register_forward_hook(hook)`. During forward passes, the hook function will run.
-
+""")
+    # end
+    st.markdown(r"""
 Here is some code which will check for `NaN`s in the output of each module, and raise a `ValueError` if it finds any. We've also given you an example tiny network which produces a `NaN` in the output of the second layer, to demonstrate it on.
 
 ```python
@@ -1333,16 +1446,16 @@ if MAIN:
 
 When you run this code, you should find it raising an error at the `NanModule`.
 """)
-
+    # start
     st.info(r"""
 Important - when you're working with PyTorch hooks, make sure you remember to remove them at the end of each exercise! This is a classic source of bugs, and one of the things that make PyTorch hooks so janky. When we study TransformerLens in subsequent exercises, we'll use a version of hooks that is essentially the same under the hood, but comes with quite a few quality of life improvements!
 """)
-
     st.markdown(r"""
 ---
 
 Congrats for finishing the exercises! In the next day, we'll dig a bit deeper into training and optimizers, and we'll end by training a ResNet from scratch on data from ImageNet.
 """)
+    # end
  
 def section_finetune():
     st.markdown(r"""
@@ -1377,29 +1490,24 @@ def page():
     func_list[page_dict[radio]]()
 
 
-# def check_password():
-#     """Returns `True` if the user had the correct password."""
+if "current_section" not in st.session_state:
+    st.session_state["current_section"] = ["", ""]
+if "current_page" not in st.session_state:
+    st.session_state["current_page"] = ["", ""]
 
-#     def password_entered():
-#         """Checks whether a password entered by the user is correct."""
-#         if st.session_state["password"] == st.secrets["password"]:
-#             st.session_state["password_correct"] = True
-#             del st.session_state["password"]  # don't store password
-#         else:
-#             st.session_state["password_correct"] = False
+def page():
+    with st.sidebar:
+        radio = st.radio("Section", page_list)
+        st.markdown("---")
+    idx = page_dict[radio]
+    func = func_list[idx]
+    func()
+    current_page = r"4_⚙️_-_ResNets_&_Model_Training"
+    st.session_state["current_section"] = [func.__name__, st.session_state["current_section"][0]]
+    st.session_state["current_page"] = [current_page, st.session_state["current_page"][0]]
+    prepend = parse_text_from_page(current_page, func.__name__)
+    new_section = st.session_state["current_section"][1] != st.session_state["current_section"][0]
+    new_page = st.session_state["current_page"][1] != st.session_state["current_page"][0]
+    chatbot_setup(prepend=prepend, new_section=new_section, new_page=new_page, debug=False)
 
-#     if "password_correct" not in st.session_state:
-#         # First run, show input for password.
-#         st.text_input("Password", type="password", on_change=password_entered, key="password")
-#         return False
-#     elif not st.session_state["password_correct"]:
-#         # Password not correct, show input + error.
-#         st.text_input("Password", type="password", on_change=password_entered, key="password")
-#         st.error("😕 Password incorrect")
-#         return False
-#     else:
-#         # Password correct.
-#         return True
-
-# if is_local or check_password():
 page()

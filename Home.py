@@ -59,7 +59,7 @@ ul.contents a:hover {
 }
 </style>""", unsafe_allow_html=True)
 
-st.sidebar.markdown("""
+st.sidebar.markdown(r"""
 ## Table of Contents
 
 <ul class="contents">
@@ -68,6 +68,7 @@ st.sidebar.markdown("""
     <li><ul class="contents">
         <li><a class="contents-el" href="#option-1-colab">Option 1: Colab</a></li>
         <li><a class="contents-el" href="#option-2-your-own-ide">Option 2: Your own IDE</a></li>
+        <li><a class="contents-el" href="#chatbot-assistant">Chatbot assistant</a></li>
     </ul></li>
     <li><a class="contents-el" href="#hints">Hints</a></li>
     <li><a class="contents-el" href="#test-functions">Test functions</a></li>
@@ -75,8 +76,9 @@ st.sidebar.markdown("""
 </ul>
 """, unsafe_allow_html=True)
 
-def page():
+def section_home():
     st_image('prereqs.png', width=600)
+    # start
     st.markdown(r"""
 
 # Chapter 1: Fundamentals
@@ -102,7 +104,8 @@ On the left, you can see a sidebar (or if it's collapsed, you will be able to se
 # Note - these exercises form different sections of the day, rather than corresponding to different days. At the start of each exercise, I've included an estimated completion time. This should be taken with a pinch of salt (you might prefer to go at different speeds, or be more/less comfortable with certain sections). But if you find yourself going well outside this estimate, then it's probably a sign that you should be more willing to ask for help (either by sending a message in the `#technical-questions` Slack, or asking any TAs who are present).
 # """)
 
-    st.markdown(r"""If you want to change to dark mode, you can do this by clicking the three horizontal lines in the top-right, then navigating to Settings → Theme.
+    st.markdown(r"""
+If you want to change to dark mode, you can do this by clicking the three horizontal lines in the top-right, then navigating to Settings → Theme.
 
 ## How you should use this material
 
@@ -142,9 +145,29 @@ To complete one of the exercise pages, you should:
 * Create a file called `part1_answers.py` (or `part1_answers.ipynb` if you prefer using notebooks)
 * Go through the Streamlit page, and copy over / fill in then run the appropriate code as you go through the exercises.
 
+### Chatbot assistant
+
+In the sidebar of this page, below the contents page, you will (at first) see an error message saying "Please set the OpenAI key...". This is space for a chatbot assistant, which can help answer your questions about the material. Take the following steps to set it up:
+
+* Go to the [OpenAI API](https://openai.com/blog/openai-api) and sign up for an account.
+* Create a secret key from [this page](https://platform.openai.com/account/api-keys). Copy this key.
+* Create a file `.streamlit/secrets.toml` in this repo, and have the first line read `api_secret = "<your key>"`.
+* Refresh the page, and you should now be able to use the chatbot.
+
+This interface was built using the `openai` library, and it exists to help answer questions you might have about the material. All prompts from this chatbot are prepended with most\* of the material on the page and section you're currently reading. For instance, try passing in the question ***What are 2 ways to use this material?*** to the chatbot, and it should describe the two options given above (i.e. colab, or your own IDE). This feature is very experimental, so please [let me know](mailto:cal.s.mcdougall@gmail.com) if you have any feedback!
+
+\**Because of the context window, the entire page isn't always included in the prompt (e.g. generally code blocks aren't included). When in doubt, you can copy sections of the page into the prompt and run it! If you get an error message saying that the prompt is too long, then you can use the **clear chat** button and start again.*
+
+Here are some suggestions for the kinds of questions you can ask the chatbot (in the appropriate sections of the course):
+
+* *(copying in a function to the start of your prompt)* What does this function do?
+* What is an intuitive explanation of induction heads?
+* What is the difference between top-k and top-p sampling?
+
 ## Hints
 
-There will be occasional hints throughout the document, for when you're having trouble with a certain task but you don't want to read the solutions. Click on the expander to reveal the solution in these cases. Below is an example of what they'll look like:""")
+There will be occasional hints throughout the document, for when you're having trouble with a certain task but you don't want to read the solutions. Click on the expander to reveal the solution in these cases. Below is an example of what they'll look like:
+""")
 
     with st.expander("Help - I'm stuck on a particular problem."):
         st.markdown("Here is the answer!")
@@ -160,8 +183,9 @@ Most of the blocks of code will also come with test functions. These are importe
 * To get the most out of these exercises, make sure you understand why all of the assertions should be true, and feel free to add more assertions.
 * If you're having trouble writing a batched computation, try doing the unbatched version first.
 * If you find these exercises challenging, it would be beneficial to go through them a second time so they feel more natural.
-
 """)
+    # end
+
 # ## Support
 
 # If you ever need help, you can send a message on the ARENA Slack channel `#technical-questions`. You can also reach out to a TA (e.g. Callum) if you'd like a quick videocall to talk through a concept or a problem that you've been having, although there might not always be someone available.
@@ -173,4 +197,18 @@ Most of the blocks of code will also come with test functions. These are importe
 # Happy coding!
 
 # if is_local or check_password():
+
+if "current_section" not in st.session_state:
+    st.session_state["current_section"] = ["", ""]
+if "current_page" not in st.session_state:
+    st.session_state["current_page"] = ["", ""]
+
+def page():
+    section_home()
+    current_page = r"home"
+    prepend = parse_text_from_page(current_page, r"section_home")
+    st.session_state["current_page"] = [current_page, st.session_state["current_page"][0]]
+    new_page = st.session_state["current_page"][0] != st.session_state["current_page"][1]
+    chatbot_setup(prepend=prepend, new_page=new_page, debug=False)
+
 page()

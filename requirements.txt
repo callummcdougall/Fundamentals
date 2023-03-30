@@ -34,3 +34,6 @@ torchtyping
 typeguard
 streamlit
 torchinfo
+frozendict
+streamlit-chat
+openai

@@ -28,7 +28,7 @@ fig_dict = st.session_state["fig_dict"]
 # %%
 
 def section_1():
-    st.sidebar.markdown("""
+    st.sidebar.markdown(r"""
 ## Table of Contents
 
 <ul class="contents">
@@ -68,10 +68,11 @@ def section_1():
 Links to Colab: [**exercises**](https://colab.research.google.com/drive/1tp-vd591FarVyn7pA2V9oYDqYiWmjEjF?usp=share_link), [**solutions**](https://colab.research.google.com/drive/19QroufIT25oZ5yG7JGWL5Jp9IPcsq0d4?usp=sharing).
 """)
     st_image("raytracing.png", 350)
+    # start
     st.markdown(r"""
 # Ray Tracing
 
-Today we'll be practicing batched matrix operations in PyTorch by writing a basic graphics renderer. We'll start with an extremely simplified case and work up to rendering your very own 3D Pikachu! Note that if you're viewing this file on GitHub, some of the equations may not render properly. Viewing it locally in VS Code should fix this.
+Today we'll be practicing batched matrix operations in PyTorch by writing a basic graphics renderer. We'll start with an extremely simplified case and work up to rendering your very own 3D Pikachu!
 
 ## 1D Image Rendering
 
@@ -83,6 +84,7 @@ The camera will emit one or more **rays**, where a ray is represented by an **or
 
 We have no concept of lighting or color yet, so for now we'll say that a pixel on our screen should show a bright color if a ray from the origin through it intersects an object, otherwise our screen should be dark.
 """)
+    # end
     st_image("ray_tracing.png", 400)
     st.markdown(r"""
 To start, we'll let the z dimension in our `(x, y, z)` space be zero and work in the remaining two dimensions. 
@@ -176,8 +178,8 @@ def make_rays_1d(num_pixels: int, y_limit: float) -> t.Tensor:
     return rays
 """)
 
+    # start
     st.markdown(r"""
-
 ### Tip - the `out` keyword argument
 
 Many PyTorch functions take an optional keyword argument `out`. If provided, instead of allocating a new tensor and returning that, the output is written directly to the `out` tensor.
@@ -194,7 +196,9 @@ Suppose we have a line segment defined by points $L_1$ and $L_2$. Then for a giv
 Our camera ray is defined by the origin $O$ and direction $D$ and our object line is defined by points $L_1$ and $L_2$.
 
 We can write the equations for all points on the camera ray as $R(u)=O +u D$ for $u \in [0, \infty)$ and on the object line as $O(v)=L_1+v(L_2 - L_1)$ for $v \in [0, 1]$.
-
+""")
+    # end
+    st.markdown(r"""
 The following interactive widget lets you play with this parameterization of the problem:
 
 ```python
@@ -224,16 +228,19 @@ if MAIN:
     box = wg.VBox([v, seed, fig])
     display(box)
 ```
-
+""")
+    # start
+    st.markdown(r"""
 Setting the line equations from above equal gives the solution:
-
+""")
+    # end
+    st.markdown(r"""
 $$
 \begin{aligned}O + u D &= L_1 + v(L_2 - L_1) \\ u D - v(L_2 - L_1) &= L_1 - O  \\ \begin{pmatrix} D_x & (L_1 - L_2)_x \\ D_y & (L_1 - L_2)_y \\ \end{pmatrix} \begin{pmatrix} u \\ v \\ \end{pmatrix} &=  \begin{pmatrix} (L_1 - O)_x \\ (L_1 - O)_y \\ \end{pmatrix} \end{aligned}
 $$
 
 Once we've found values of $u$ and $v$ which satisfy this equation, if any (the lines could be parallel) we just need to check that $u \geq 0$ and $v \in [0, 1]$.
 """)
-
     with st.columns(1)[0]:
         st.markdown(r"""
 ### Exercise - which segments intersect with the rays?
@@ -358,6 +365,7 @@ def intersect_ray_1d(ray: t.Tensor, segment: t.Tensor) -> bool:
     return (u >= 0.0) and (v >= 0.0) and (v <= 1.0)
 ```
 """)
+    # start
     st.markdown(r"""
 ### Aside - typechecking
 
@@ -366,7 +374,9 @@ Typechecking is a useful habit to get into. It's not strictly necessary, but it 
 One good way to typecheck in PyTorch is with the `torchtyping`. The most important object in this library is the `TensorType` object, which can be used to specify things like the shape and dtype of a tensor.
 
 In its simplest form, this just behaves like a fancier version of a docstring or comment (signalling to you, as well as any readers, what the size of objects should be). But you can also use the `typeguard.typechecked` to strictly enforce the type signatures of your inputs and outputs. For instance, if you replaced the `intersect_ray_1d` function with the following:
-
+""")
+    # end
+    st.markdown(r"""
 ```python
 from torchtyping import TensorType as TT
 from torchtyping import patch_typeguard
@@ -389,7 +399,9 @@ You can do other things with `TorchTyping`, such as:
 * Specify dtypes, e.g. `TT["batch", 512, t.float32]` checks the tensor has shape `(?, 512)` and dtype `torch.float32`.
 
 You can read more [here](https://github.com/patrick-kidger/torchtyping).
-
+""")
+    # start
+    st.markdown(r"""
 ## Batched Ray-Segment Intersection
 
 Next, implement a batched version that takes multiple rays, multiple line segments, and returns a boolean for each ray indicating whether **any** segment intersects with that ray.
@@ -434,6 +446,7 @@ print(A + B)
 
 Broadcasting sematics are a bit messy, and we'll go into it in more detail later in the course. If you want to get a full picture of it then click on the dropdown below, but for now here's the important thing to know - ***broadcasting of tensors `A` and `B` (where `B` has fewer dimensions) will work if the shape of `B` is a suffix of the shape of `A`***. The code block above is an example of this.
 """)
+    # end
     with st.expander("More on broadcasting"):
         st.markdown(r"""
 If you try to broadcast tensors `A` and `B`, then the following happens:
@@ -453,6 +466,7 @@ Here are a few examples:
     * `B` is padded with a dimension of size one on the left, giving `(1, 2)`.
     * Compare the new shapes of `A` and `B`; broadcasting fails because the last dimensions don't match.
 """)
+    # start
     st.info(r"""
 ### Summary of all these tips
 
@@ -462,6 +476,7 @@ Here are a few examples:
 * Use `torch.any()` or `.any()` to do logical reductions (you can do this over a single dimension, with the `dim` argument).
 * If you're trying to broadcast tensors `A` and `B` (where `B` has fewer dimensions), this will work if the shape of `B` is a **suffix** of the shape of `A`.
 """)
+    # end
     st.markdown("")
     with st.columns(1)[0]:
         st.markdown(r"""
@@ -619,12 +634,14 @@ def make_rays_2d(num_pixels_y: int, num_pixels_z: int, y_limit: float, z_limit: 
     return rays
 ```
 """)
+    # start
     st.markdown(r"""
-
 ## Triangle Coordinates
 
-The area inside a triangle can be defined by three (non-collinear) points $A$, $B$ and $C$, and can be written algebraically as a **convex combination** of those three points:
-
+The area inside a triangle can be defined by three (non-collinear) points $A$, $B$ and $C$, and can be written algebraically as a **convex combination** of those three points.
+""")
+    # end
+    st.markdown(r"""
 $$
 \begin{align*}
 P(w, u, v) &= wA + uB + vC \quad\quad \\
@@ -682,14 +699,18 @@ if MAIN:
     box = wg.VBox([u, v, fig])
     display(box)
 ```
-
+""")
+    # start
+    st.markdown(r"""
 ### Triangle-Ray Intersection
 
 Given a ray with origin $O$ and direction $D$, our intersection algorithm will consist of two steps:
 
 - Finding the intersection between the line and the plane containing the triangle, by solving the equation $P(u, v) = P(s)$;
 - Checking if $u$ and $v$ are within the bounds of the triangle.
-
+""")
+    # end
+    st.markdown(r"""
 Expanding the equation $P(u, v) = P(s)$, we have:
 
 $$
@@ -784,7 +805,9 @@ Implement `raytrace_triangle` using only one call to `torch.linalg.solve`.
 Reshape the output and visualize with `plt.imshow`. It's normal for the edges to look pixelated and jagged - using a small number of pixels is a good way to debug quickly. 
 
 If you think it's working, increase the number of pixels and verify that it looks less pixelated at higher resolution.
-
+""")
+    # start
+    st.markdown(r"""
 ### Views and Copies
 
 It's critical to know when you are making a copy of a `Tensor`, versus making a view of it that shares the data with the original tensor. It's preferable to use a view whenever possible to avoid copying memory unnecessarily. On the other hand, modifying a view modifies the original tensor which can be unintended and surprising. Consult [the documentation](https://pytorch.org/docs/stable/tensor_view.html) if you're unsure if a function returns a view. A short reference of common functions:
@@ -824,6 +847,7 @@ del x
 
 Here, `y` was created through basic indexing, so `y` is a view and `y._base` refers to `x`. This means `del x` won't actually deallocate the 4GB of memory, and that memory will remain in use which can be quite surprising. `y = x[0].clone()` would be an alternative here that does allow reclaiming the memory.
 """)
+    # end
     with st.columns(1)[0]:
         st.markdown(r"""
 ### Exercise - implement `raytrace_triangle`
@@ -906,13 +930,16 @@ Use the given code to load the triangles for your Pikachu. By convention, files 
 with open("pikachu.pt", "rb") as f:
     triangles = t.load(f)
 ```
-
+""")
+    # start
+    st.markdown(r"""
 ## Mesh Rendering
 
 For our purposes, a mesh is just a group of triangles, so to render it we'll intersect all rays and all triangles at once. We previously just returned a boolean for whether a given ray intersects the triangle, but now it's possible that more than one triangle intersects a given ray. 
 
 For each ray (pixel) we will return a float representing the minimum distance to a triangle if applicable, otherwise the special value `float('inf')` representing infinity. We won't return which triangle was intersected for now.
 """)
+    # end
 
     with st.columns(1)[0]:
         st.markdown(r"""
@@ -1013,4 +1040,32 @@ Some fun extensions to try:
 """)
 
 
-section_1()
+if "current_section" not in st.session_state:
+    st.session_state["current_section"] = ["", ""]
+if "current_page" not in st.session_state:
+    st.session_state["current_page"] = ["", ""]
+
+# def page():
+#     with st.sidebar:
+#         radio = st.radio("Section", page_list)
+#         st.markdown("---")
+#     idx = page_dict[radio]
+#     func = func_list[idx]
+#     func()
+#     current_page = r"4_💻_Interpretability_on_an_algorithmic_model"
+#     st.session_state["current_section"] = [func.__name__, st.session_state["current_section"][0]]
+#     st.session_state["current_page"] = [current_page, st.session_state["current_page"][0]]
+#     prepend = parse_text_from_page(current_page, func.__name__)
+#     new_section = st.session_state["current_section"][1] != st.session_state["current_section"][0]
+#     new_page = st.session_state["current_page"][1] != st.session_state["current_page"][0]
+#     chatbot_setup(prepend=prepend, new_section=new_section, new_page=new_page, debug=True)
+
+def page():
+    section_1()
+    current_page = r"1_🔦_Ray_Tracing"
+    prepend = parse_text_from_page(current_page, r"section_1")
+    st.session_state["current_page"] = [current_page, st.session_state["current_page"][0]]
+    new_page = st.session_state["current_page"][0] != st.session_state["current_page"][1]
+    chatbot_setup(prepend=prepend, new_page=new_page, debug=False)
+
+page()

@@ -29,6 +29,7 @@ def section_home():
 Links to Colab: [**exercises**](https://colab.research.google.com/drive/1n-OG0x7kZfZaMCNO-S4L86-W6bE_jiVz?usp=sharing), [**solutions**](https://colab.research.google.com/drive/1K3f_ebaaHDufnGbn_zzzTisejXTM_b01?usp=sharing).
 """)
     st_image("backprop.png", 350)
+    # start
     st.markdown(r"""
 # Build Your Own Backpropagation Framework
 
@@ -66,6 +67,7 @@ This completes the chain which starts at basic numpy arrays, and ends with us be
 
 A few bonus exercises are suggested, for pushing your understanding of backpropagation further.
 """)
+    # end
 
 def section_intro():
     st.sidebar.markdown(r"""
@@ -90,12 +92,16 @@ def section_intro():
     </li></ul>
 </ul>
 """, unsafe_allow_html=True)
-
+    # start
     st.markdown(r"""
+# Introduction
+
 ## Reading
 
 * [Calculus on Computational Graphs: Backpropagation (Chris Olah)](https://colah.github.io/posts/2015-08-Backprop/)
-
+""")
+    # end
+    st.markdown(r"""
 ## Imports
 
 ```python
@@ -116,7 +122,9 @@ grad_tracking_enabled = True
 
 MAIN = __name__ == "__main__"
 ```
-
+""")
+    # start
+    st.markdown(r"""
 ## Computing Gradients with Backpropagation
 
 This section will briefly review the backpropagation algorithm, but focus mainly on the concrete implementation in software.
@@ -129,6 +137,7 @@ A second obvious way is to write out the function for the entire network, and th
 
 Suppose that you have some **computational graph**, and you want to determine the derivative of the some scalar loss L with respect to NumPy arrays a, b, and c:
 """)
+    # end
 
     st.write(r"""<figure style="max-width:450px"><embed type="image/svg+xml" src="https://mermaid.ink/svg/pako:eNpVj00KwjAQha8SZm0uEEEQirqoG91mM3YmNpCkpU0QCb27iRXUWT3efG9-MnQDMSi4Tzj2or3oIEp1Due5YSMevY0sjHVOveVWh5VAKeUhn5NblFpbUu6omKe8J_o12zVwq4GvPP5hn63VLwmuY2ADniePlsp1uQIaYs-eNagiiQ0mFzXosBQUUxyuz9CBilPiDaSRMHJjsfzlQRl0My8vLRhKgw" /></figure>""", unsafe_allow_html=True)
     # graph LR
@@ -147,7 +156,9 @@ d = a * b
 e = b + c
 L = d + e
 ```
-
+""")
+    # start
+    st.markdown(r"""
 The goal of our system is that users can write ordinary looking Python code like this and have all the book-keeping needed to perform backpropagation happen behind the scenes. To do this, we're going to wrap each array and each function in special objects from our library that do the usual thing plus build up this graph structure that we need.
 
 ### Backward Functions
@@ -197,7 +208,7 @@ When described in terms of the diagram above, topological sort can be thought of
 
 There are many ways of proving that a cycle-free directed graph contains a topological ordering. You can try and prove this for yourself, or click on the expander below to reveal the outline of a simple proof.
 """)
-
+    # end
     with st.expander("Click to reveal proof"):
         st.markdown(r"""
 We can prove by induction on the number of nodes $N$. 
@@ -222,7 +233,9 @@ During backprop, we're moving from right to left in the diagram. If a node doesn
 
     st.markdown(r"""
 The very first node in our topological sort will be $L$, the root node.
-
+""")
+    # start
+    st.markdown(r"""
 ### Backpropagation
 
 After all this setup, the backpropagation mechanism becomes pretty straightforward. We sort the nodes topologically, then we iterate over them and call each backward function exactly once in order to accumulate the gradients at each node.
@@ -235,6 +248,7 @@ During backpropagation, for each forward function in our computational graph we 
 
 First, we'll write the backward function for `x -> out = log(x)`. This should be a function which, when fed the values `x, out, grad_out = dL/d(out)` returns the value of `dL/dx` just from this particular computational path.
 """)
+    # end
 
     st.write(r"""<figure style="max-width:400px"><embed type="image/svg+xml" src="https://mermaid.ink/svg/pako:eNoljr0KwzAQg1_F3JzLA1whU-iUqV29HPY5MfgnJDZtCXn3uo0mgT4JHWCyFSCYN14XNT10Uk0m8L6P4tRr8UWU8yHQ3950uoi3QsT7MeX5JLoyxCHXgn2PwwQdRNkie9u2j19FQ1kkigZq1orjGooGnc6Gci35-UkGqGxVOqir5SKj5_YqAjkOu5xfhPw4VQ" /></figure>""", unsafe_allow_html=True)
     # graph LR
@@ -242,7 +256,7 @@ First, we'll write the backward function for `x -> out = log(x)`. This should be
 
     # x ---F{Log}:::white-->out-..->L
 
-
+    # start
     st.markdown(r"""
 Note - it might seem strange at first why we need `x` and `out` to be inputs, `out` can be calculated directly from `x`. The answer is that sometimes it is computationally cheaper to express the derivative in terms of `out` than in terms of `x`.
 """)
@@ -253,6 +267,7 @@ Question - can you think of an example function where it would be computationall
         st.markdown(r"""
 The most obvious answer is the exponential function, `out = e ^ x`. Here, the gradient `d(out)/dx` is equal to `out`. We'll see this when we implement a backward version of `torch.exp` later today.
 """)
+    # end
 
     with st.columns(1)[0]:
         st.markdown(r"""
@@ -280,7 +295,7 @@ if MAIN:
     tests.test_log_back(log_back)
 ```
 """)
-        with st.expander(r"""Help - I'm not sure what the output of this backward function for log should be."""):
+        with st.expander(r"Help - I'm not sure what the output of this backward function for log should be."):
             st.markdown(r"""
 By the chain rule, we have:
 
@@ -307,6 +322,7 @@ def log_back(grad_out: Arr, out: Arr, x: Arr) -> Arr:
     return grad_out / x
 ```
 """)
+    # start
     st.markdown(r"""
 ## Backward functions of two tensors
 
@@ -320,7 +336,9 @@ Both NumPy and PyTorch have the same rules for broadcasting. The shape of the ar
 * one of them is 1 (in which case the array is repeated along this dimension to fit into the other one).
 
 Two arrays with a different number of dimensions can be operated on, provided the one with fewer dimensions is compatible with the rightmost elements of the one with more dimensions. Another way to picture this is that NumPy appends dimensions of size 1 to the start of the smaller-dimensional array until they both have the same dimensionality, and then their sizes are checked for compatibility.
-
+""")
+    # end
+    st.markdown(r"""
 As a warm-up exercise, below are some examples of broadcasting. Can you figure out which are valid, and which will raise errors?
 
 ```python
@@ -331,8 +349,10 @@ z = x + y
 ```
 """)
 
-    with st.expander(r"""Answer"""):
-        st.markdown(r"""This is valid, because the 0th dimension of `y` and the 1st dimension of `x` can both be copied so that `x` and `y` have the same shape: `(3, 4, 5)`. The resulting array `z` will also have shape `(3, 4, 5)`.""")
+    with st.expander(r"Answer"):
+        st.markdown(r"""
+This is valid, because the 0th dimension of `y` and the 1st dimension of `x` can both be copied so that `x` and `y` have the same shape: `(3, 4, 5)`. The resulting array `z` will also have shape `(3, 4, 5)`.
+""")
 
     st.markdown(r"""
 ```python
@@ -343,8 +363,10 @@ z = x + y
 ```
 """)
 
-    with st.expander(r"""Answer"""):
-        st.markdown(r"""This is not valid. We first need to expand `y` by appending a dimension to the front, and the last two dimensions of `x` are `(2, 6)`, which won't broadcast with `y`'s `(8, 2)`.""")
+    with st.expander(r"Answer"):
+        st.markdown(r"""
+This is not valid. We first need to expand `y` by appending a dimension to the front, and the last two dimensions of `x` are `(2, 6)`, which won't broadcast with `y`'s `(8, 2)`.
+""")
 
     st.markdown(r"""
 ```python
@@ -352,14 +374,13 @@ x = np.ones((8, 2, 6))
 y = np.ones((2, 6))
 
 z = x + y
-```""")
+```
+""")
 
-    with st.expander(r"""Answer"""):
-        st.markdown(r"""This is valid. Once NumPy expands `y` by appending a single dimension to the front, it can then be broadcast with `x`.""")
-
-
-# with st.expander(r"""Help - I'm not sure what this function is asking for."""):
-#     st.markdown(r"""We effectively have $\frac{dL}{d(\text{out})}$, $\text{out}$ and $x$ as inputs to our `log_back` function, and we're trying to compute $\frac{dL}{dx}$. The answer was provided in the expander above.""")
+    with st.expander(r"Answer"):
+        st.markdown(r"""
+This is valid. Once NumPy expands `y` by appending a single dimension to the front, it can then be broadcast with `x`.
+""")
 
     st.markdown(r"""
 ### Why do we need broadcasting for backprop?
@@ -423,7 +444,7 @@ if MAIN:
     tests.test_unbroadcast(unbroadcast)
 ```
 """)
-        with st.expander(r"""Help - I'm confused about implementing unbroadcast!"""):
+        with st.expander(r"Help - I'm confused about implementing unbroadcast!"):
             st.markdown(r"""
 Recall that broadcasting `original -> broadcasted` has 2 steps:
 
@@ -439,7 +460,7 @@ Similarly, your `unbroadcast` function should have 2 steps:
 2. Sum over the dimensions of `broadcasted` wherever `original` has size 1.
     * Here you should use `keepdims=True`, because you want to leave these dimensions having size 1 (so that the result has the same shape as `original`).
 """)
-        with st.expander(r"""Solution"""):
+        with st.expander(r"Solution"):
             st.markdown(r"""
 ```python
 def unbroadcast(broadcasted: Arr, original: Arr) -> Arr:
@@ -462,6 +483,7 @@ def unbroadcast(broadcasted: Arr, original: Arr) -> Arr:
     return broadcasted
 ```
 """)
+    # start
     st.markdown(r"""
 ### Backward Function for Elementwise Multiply
 
@@ -479,7 +501,9 @@ Functions that are differentiable with respect to more than one input tensor are
 Below, you should implement both `multiply_back0` and `multiply_back1`. 
 
 You might be wondering why we need two different functions, rather than just having a single function to serve both purposes. This will become more important later on, once we deal with functions with more than one argument, which is not symmetric in its arguments. For instance, the derivative of $x / y$ wrt $x$ is not the same as the expression you get after differentiating this wrt $y$ then swapping the labels around.
-
+""")
+        # end
+        st.markdown(r"""
 The first part of each function has been provided for you (this makes sure that both inputs are arrays).
 
 ```python
@@ -632,9 +656,11 @@ def forward_and_back(a: Arr, b: Arr, c: Arr) -> Tuple[Arr, Arr, Arr]:
     return (dg_da, dg_db, dg_dc)
 ```
 """)
+    # start
     st.markdown(r"""
 In the next section, you'll build up to full automation of this backpropagation process, in a way that's similar to PyTorch's `autograd`.
 """)
+    # end
 
 def section_autograd():
     st.sidebar.markdown(r"""
@@ -658,7 +684,7 @@ def section_autograd():
     </li></ul>
 </ul>
 """, unsafe_allow_html=True)
-
+    # start
     st.markdown(r"""
 # Autograd
 
@@ -702,16 +728,20 @@ class Recipe:
 ```
 
 Note that `args` just stores the values of the underlying arrays, but `parents` stores the actual tensors. This is because they serve two different purposes: `args` is required for computing the value of gradients during backpropagation, and `parents` is required to infer the structure of the computational graph (i.e. which tensors were used to produce which other tensors).
-
+""")
+    # end
+    st.markdown(r"""
 Here are some examples, to build intuition for what the four fields of `Recipe` are, and why we need all four of them to fully describe a tensor in our graph and how it was created:
 """)
     st_image("recipe.png", 800)
+    # start
     st.markdown(r"""
 
 ## Registering backwards functions
 
 The `Recipe` takes care of tracking the forward functions in our computational graph, but we still need a way to find the backward function corresponding to a given forward function when we do backprop (or possibly the set of backward functions, if the forward function takes more than one argument).
 """)
+    # end
     with st.columns(1)[0]:
         st.markdown(r"""
 ### Exercise - implement `BackwardFuncLookup`
@@ -771,7 +801,7 @@ class BackwardFuncLookup:
         return self.back_funcs[forward_fn][arg_position]
 ```
 """)
-
+    # start
     st.markdown(r"""
 ## Tensors
 
@@ -791,6 +821,7 @@ Note that `requires_grad` does not necessarily mean that we will save the accumu
 
 There is a lot of repetitive boilerplate involved which we have done for you. You don't need to modify anything in this class: the methods here will delegate to functions that you will implement throughout the day. You should read the code for the `Tensor` class up to `__init__`, and make sure you understand it. Most of the methods beyond this are just replicating the basic functionality of PyTorch tensors.
 """)
+    # end
     st.error(r"""
 ###### There's a lot of code in the block below, which is why it's been put in an expander (otherwise it's a pain to scroll past!). You should copy this code into your `answers` file and run it.
 """)
@@ -959,7 +990,7 @@ def tensor(array: Arr, requires_grad=False) -> Tensor:
     return Tensor(array, requires_grad=requires_grad)
 ```
 """)
-
+    # start
     st.markdown(r"""
 ## Forward Pass: Building the Computational Graph
 
@@ -976,7 +1007,9 @@ Our `log` function must do the following:
 - If grad tracking is enabled globally AND (the input requires grad, OR has a recipe), then the output requires grad and we fill out the recipe of our output, as a `Recipe` object.
 
 Later we'll redo this in a generic and reusable way, but for now just get it working.
-
+""")
+        # end
+        st.markdown(r"""
 ```python
 def log_forward(x: Tensor) -> Tensor:
     pass
@@ -1026,6 +1059,7 @@ def log_forward(x: Tensor) -> Tensor:
 Now let's do the same for multiply, to see how to handle functions with multiple arguments. 
 """)
     with st.columns(1)[0]:
+        # start
         st.markdown(r"""
 ### Exercise - implement `multiply_forward`
 
@@ -1037,7 +1071,9 @@ There are a few differences between this and log:
 - One of the inputs may be an int, so you'll need to deal with this case before calculating `out`
 
 If you're confused, you can scroll up to the diagram at the top of the page (which tells you how to construct the recipe for functions like multiply or add when they are both arrays, or when one is an array and the other is a scalar).
-
+""")
+        # end
+        st.markdown(r"""
 ```python
 def multiply_forward(a: Union[Tensor, int], b: Union[Tensor, int]) -> Tensor:
     assert isinstance(a, Tensor) or isinstance(b, Tensor)
@@ -1060,12 +1096,16 @@ if MAIN:
 ```
 """)
 
-        with st.expander(r"""Help - I get "AttributeError: 'int' object has no attribute 'array'"."""):
+        with st.expander(r"""
+Help - I get "AttributeError: 'int' object has no attribute 'array'".
+"""):
             st.markdown(r"""
 Remember that your multiply function should also accept integers. You need to separately deal with the cases where `a` and `b` are integers or Tensors.
 """)
         
-        with st.expander(r"""Help - I get "AssertionError: assert len(c.recipe.parents) == 1 and c.recipe.parents[0] is a" in the "test_multiply_float" test."""):
+        with st.expander(r"""
+Help - I get "AssertionError: assert len(c.recipe.parents) == 1 and c.recipe.parents[0] is a" in the "test_multiply_float" test.
+"""):
             st.markdown(r"""
 This is probably because you've stored the inputs to `multiply` as integers when one of the is an integer. Remember, `parents` should just be a list of the **Tensors** that were inputs to `multiply`, so you shouldn't add ints.
 """)
@@ -1098,7 +1138,7 @@ def multiply_forward(a: Union[Tensor, int], b: Union[Tensor, int]) -> Tensor:
     return out
 ```
 """)
-
+    # start
     st.markdown(r"""
 ## Forward Pass - Generic Version
 
@@ -1107,6 +1147,7 @@ Implement the higher order function `wrap_forward_fn` that takes a `Arr -> Arr` 
 
 *(You are recommended to start by copying the code for `multiply_forward` into the body of `tensor_func`, and then modifying it to make it generic. Again, the diagrams above should help you figure out how to do this.)*
 """)
+    # end
     with st.columns(1)[0]:
         st.markdown(r"""
 ### Exercise - implement `wrap_forward_fn`
@@ -1148,10 +1189,16 @@ if MAIN:
 ```
 """)
 
-        with st.expander(r"""Help - I'm getting "NameError: name 'getitem' is not defined"."""):
-            st.markdown(r"""This is probably because you're calling `numpy_func` on the args themselves. Recall that `args` will be a list of `Tensor` objects, and that you should call `numpy_func` on the underlying arrays.""")
+        with st.expander(r"""
+Help - I'm getting "NameError: name 'getitem' is not defined".
+"""):
+            st.markdown(r"""
+This is probably because you're calling `numpy_func` on the args themselves. Recall that `args` will be a list of `Tensor` objects, and that you should call `numpy_func` on the underlying arrays.
+""")
 
-        with st.expander(r"""Help - I'm getting an AssertionError on "assert c.requires_grad == True", or something similar."""):
+        with st.expander(r"""
+Help - I'm getting an AssertionError on "assert c.requires_grad == True", or something similar.
+"""):
             st.markdown(r"""
 This is probably because you're not defining `requires_grad` correctly. Remember that the output of a forward function should have `requires_grad = True` if and only if all of the following hold:
 
@@ -1160,11 +1207,14 @@ This is probably because you're not defining `requires_grad` correctly. Remember
 * **Any** of the inputs are tensors with `requires_grad = True`
 """)
 
-        with st.expander(r"""Help - my function passes all tests up to "test_sum", but then fails here."""):
+        with st.expander(r"""
+Help - my function passes all tests up to "test_sum", but then fails here.
+"""):
             st.markdown(r"""
 `test_sum`, unlike the previous tests, wraps a function that uses keyword arguments. So if you're failing here, it's probably because you didn't use `kwargs` correctly.
 
-`kwargs` should be used in two ways: once when actually calling the `numpy_func`, and once when defining the `Recipe` object for the output tensor.""")
+`kwargs` should be used in two ways: once when actually calling the `numpy_func`, and once when defining the `Recipe` object for the output tensor.
+""")
 
         st.markdown(r"""
 Note - none of these functions involve keyword args, so the tests won't detect if you're handling kwargs incorrectly (or even failing to use them at all). If your code fails in later exercises, you might want to come back here and check that you're using the kwargs correctly. Alternatively, once you pass the tests, you can compare your code to the solutions and see how they handle kwargs.
@@ -1200,7 +1250,7 @@ def wrap_forward_fn(numpy_func: Callable, is_differentiable=True) -> Callable:
     return tensor_func
 ```
 """)
-
+    # start
     st.markdown(r"""
 ## Backpropagation
 
@@ -1214,6 +1264,7 @@ Now all the pieces are in place to implement backpropagation. We need to:
 
 As part of backprop, we need to sort the nodes of our graph so we can traverse the graph in the appropriate order.
 """)
+    # end
     with st.columns(1)[0]:
         st.markdown(r"""
 ### Exercise - implement `topological_sort`
@@ -1221,6 +1272,7 @@ As part of backprop, we need to sort the nodes of our graph so we can traverse t
         st.error(r"""
 *Note, it's completely fine to skip this problem if you're not very interested in it. You can just look at the solution (which is an implementation of depth first search). This is more of a fun LeetCode-style puzzle, and writing a solution for this isn't crucial for the overall experience of these exercises.*
 """)
+        # start
         st.markdown(r"""
 Write a general function `topological_sort` that return a list of node's children in topological order (beginning with the furthest descendants, ending with the starting node) using [depth-first search](https://en.wikipedia.org/wiki/Topological_sorting). 
 
@@ -1228,6 +1280,7 @@ We've given you a `Node` class, with a `children` attribute, and a `get_children
 
 If you're stuck, try looking at the pseudocode from some of [these examples](https://en.wikipedia.org/wiki/Topological_sorting#Kahn's_algorithm). 
 """)
+        # end
 
         st.markdown(r"""
 ```python
@@ -1257,7 +1310,9 @@ if MAIN:
 ```
 """)
 
-        with st.expander(r"""Help - my function is hanging without returning any values."""):
+        with st.expander(r"""
+Help - my function is hanging without returning any values.
+"""):
             st.markdown(r"""
 This is probably because it's going around in cycles when fed a cyclic graph. You should add a way of raising an error if your function detects that the graph isn't cyclic. One way to do this is to create a set `temp`, which stores the nodes you've visited on a particular excursion into the graph, then you can raise an error if you come across an already visited node.
 """)
@@ -1370,11 +1425,14 @@ def sorted_computational_graph(tensor: Tensor) -> List[Tensor]:
     return topological_sort(tensor, get_parents)[::-1]
 ```
 """)
+    # start
     st.markdown(r"""
 ### The `backward` method
 
 Now we're really ready for backprop!
-
+""")
+    # end
+    st.markdown(r"""
 Recall that in the implementation of the class `Tensor`, we had:
 
 ```python
@@ -1387,7 +1445,9 @@ class Tensor:
 ```
 
 In other words, for a tensor `out`, calling `out.backward()` is equivalent to `backprop(out)`.
-
+""")
+    # start
+    st.markdown(r"""
 ### End grad
 
 You might be wondering what role the `end_grad` argument in `backward` plays. We usually just call `out.backward()` when we're working with loss functions; why do we need another argument?
@@ -1417,7 +1477,9 @@ class Tensor:
 In other words, leaf node tensors are any with either `requires_grad=False`, or which were *not* created by some operation on other tensors. 
 
 In backprop, only the leaf nodes with `requires_grad=True` accumulate gradients. You can think of leaf nodes as being edges of the computational graph, i.e. nodes from which you can't move further backwards topologically. 
-
+""")
+    # end
+    st.markdown(r"""
 For example, suppose we have a neural network with a single linear layer called `layer`, and it produces `output` when we pass in `input`. Then:
 
 * `output` is not a leaf node, because it is the result of an operation on `layer.weight` and `input` (i.e. `recipe.parents` is not None)
@@ -1439,15 +1501,17 @@ print(input.requires_grad)        # -> False
 ```
 
 In the computational graph in the next section, the only leaves are `a`, `b` and `c`.
-
 """)
     with st.columns(1)[0]:
+        # start
         st.markdown(r"""
 ### Exercise - implement `backprop`
 """)
+        # end
         st.error(r"""
 *This exercise is the most conceptually important today. You should be willing to spend around 30 minutes on it. We've provided several dropdowns to help you along.*
 """)
+        # start
         st.markdown(r"""
 Now, we get to the actual backprop function! Some code is provided below, which you should complete.
 
@@ -1456,7 +1520,9 @@ If you want a challenge, you can try and implement it straight away, with out an
 We've also provided a few dropdowns to address specific technical errors that can arise from implementing this function. If you're having trouble, you can use these to help you debug.
 
 Either way, you're recommended to take some time with this function, as it's definitely the single most conceptually important exercise in the "Build Your Own Backpropagation Framework" section.
-
+""")
+        # end
+        st.markdown(r"""
 ```python
 def backprop(end_node: Tensor, end_grad: Optional[Tensor] = None) -> None:
     '''Accumulates gradients in the grad field of each leaf node.
@@ -1481,12 +1547,14 @@ if MAIN:
 ```
 """)
         with st.expander("Dropdown #1 - sketch of algorithm"):
+            # start
             st.markdown(r"""
 You should iterate through the computational graph, in the order returned by your function (i.e. from right to left). For each tensor, you need to do two things:
 
 * If necessary, store the gradient in the `grad` field of the tensor. (This means you'll have to store the gradients in an external object, before setting them as attributes of the tensors.)
 * For each of the tensor's parents, store the gradients of those tensors for this particular path through the graph (this will require calling your backward functions, which you should get from the `BACK_FUNCS` object).
 """)
+            # end
         with st.expander("Dropdown #2 - diagram of algorithm"):
             st_image("backprop-2.png", 800)
         with st.expander("Dropdown #3 - annotations"):
@@ -1526,18 +1594,25 @@ def backprop(end_node: Tensor, end_grad: Optional[Tensor] = None) -> None:
         with st.expander("Help - I get AttributeError: 'NoneType' object has no attribute 'func'"):
             st.markdown(r"""This error is probably because you're trying to access `recipe.func` from the wrong node. Possibly, you're calling your backward functions using the parents nodes' `recipe.func`, rather than the node's `recipe.func`.
         
-To explain further, suppose your computational graph is simply:""")
+To explain further, suppose your computational graph is simply:
+""")
 
             st.write(r"""<figure style="max-width:320px"><embed type="image/svg+xml" src="https://mermaid.ink/svg/pako:eNolTjEOwjAQ-0p0czvAmIGJERZYbzmSC43UJFW4DKjp37kWT7Zly17BFc9g4V1pmcztgdkoyIzjxfTQsjv11y4Ofu7GwQCJa6LotbXucQSZODGCVeo5UJsFAfOmUWpSnt_swEptPEBbPAlfI-leAhto_qjLPkqp9_-T49D2A4txMhY" /></figure>""", unsafe_allow_html=True)
 
-            st.markdown(r"""When you reach `b` in your backprop iteration, you should calculate the gradient wrt `a` (the only parent of `b`) and store it in your `grads` dictionary, as `grads[a]`. In order to do this, you need the backward function for `func1`, which is stored in the node `b` (recall that the recipe of a tensor can be thought of as a set of instructions for how that tensor was created).""")
+            st.markdown(r"""
+When you reach `b` in your backprop iteration, you should calculate the gradient wrt `a` (the only parent of `b`) and store it in your `grads` dictionary, as `grads[a]`. In order to do this, you need the backward function for `func1`, which is stored in the node `b` (recall that the recipe of a tensor can be thought of as a set of instructions for how that tensor was created).
+""")
 
         with st.expander("Help - I get AttributeError: 'numpy.ndarray' object has no attribute 'array'"):
-            st.markdown(r"""This might be because you've set `node.grad` to be an array, rather than a tensor. You should store gradients as tensors (think of PyTorch, where `tensor.grad` will have type `torch.Tensor`).
+            st.markdown(r"""
+This might be because you've set `node.grad` to be an array, rather than a tensor. You should store gradients as tensors (think of PyTorch, where `tensor.grad` will have type `torch.Tensor`).
         
-It's fine to store numpy arrays in the `grads` dictionary, but when it comes time to set a tensor's grad attribute, you should use a tensor.""")
+It's fine to store numpy arrays in the `grads` dictionary, but when it comes time to set a tensor's grad attribute, you should use a tensor.
+""")
 
-        with st.expander(r"""Help - I get 'RuntimeError: bool value of Tensor with more than one value is ambiguous'."""):
+        with st.expander(r"""
+Help - I get 'RuntimeError: bool value of Tensor with more than one value is ambiguous'.
+"""):
             st.markdown(r"""
 This error is probably because your computational graph function checks whether a tensor is in a list. The way these classes are compared for equality is a bit funky, and using sets rather than lists should make this error go away (i.e. checking whether a tensor is in a set should be fine).
 """)
@@ -1626,7 +1701,7 @@ def section_more_fwd_bwd():
     <li><a class="contents-el" href="#2d-matmul">2D <code>matmul</code></a></li>
 </ul>
 """, unsafe_allow_html=True)
-
+    # start
     st.markdown(r"""
 # More forward & backward functions
 
@@ -1634,9 +1709,11 @@ Congrats on implementing backprop! The next thing we'll do is write implement a 
 
 These should be just like your `log_back` and `multiply_back0`, `multiplyback1` examples earlier.
 """)
+    # end
     st.error(r"""
-*Note - some of these exercises can get a bit repetitive. About 60% of the value of these exercises was in the first 2 sections out of 5, and of the remaining 40%, not much of it is in this section! So you're welcome to skim through these exercises if you don't find them interesting.*
+*Note - some of these exercises can get a bit repetitive. About 60% of the value of these exercises was in the first 2 sections out of 5, and of the remaining 40%, most of it is in the two sections after this one! So you're welcome to skim through these exercises if you don't find them interesting.*
 """)
+    # start
     st.markdown(r"""
 ## Non-Differentiable Functions
 
@@ -1659,11 +1736,12 @@ if MAIN:
     assert b.recipe is None
     assert b.item() == 3
 ```
-
 ## `negative`
 
 `torch.negative` just performs `-x` elementwise. Make your own version `negative` using `wrap_forward_fn`.
-
+""")
+    # end
+    st.markdown(r"""
 ```python
 def negative_back(grad_out: Arr, out: Arr, x: Arr) -> Arr:
     '''Backward function for f(x) = -x elementwise.'''
@@ -1686,11 +1764,20 @@ def negative_back(grad_out: Arr, out: Arr, x: Arr) -> Arr:
     return np.full_like(x, -1) * grad_out
 ```
 """)
+    # start
     st.markdown(r"""
 ## `exp`
-
-Make your own version of `torch.exp`. The backward function should express the result in terms of the `out` parameter - this more efficient than expressing it in terms of `x`.
-
+""")
+    # end
+    st.markdown(r"""
+Make your own version of `torch.exp`.
+""")
+    # start
+    st.markdown(r"""
+The backward function should express the result in terms of the `out` parameter - this more efficient than expressing it in terms of `x`.
+""")
+    # end
+    st.markdown(r"""
 ```python
 def exp_back(grad_out: Arr, out: Arr, x: Arr) -> Arr:
     pass
@@ -1710,6 +1797,7 @@ def exp_back(grad_out: Arr, out: Arr, x: Arr) -> Arr:
     return out * grad_out
 ```
 """)
+    # start
     st.markdown(r"""
 ## `reshape`
 
@@ -1718,7 +1806,9 @@ def exp_back(grad_out: Arr, out: Arr, x: Arr) -> Arr:
 Depending how you wrote `wrap_forward_fn` and `backprop`, you might need to go back and adjust them to handle this. Or, you might just have to implement `reshape_back` and everything will work. 
 
 Note that the output is a different shape than the input, but this doesn't introduce any additional complications.
-
+""")
+    # end
+    st.markdown(r"""
 ```python
 def reshape_back(grad_out: Arr, out: Arr, x: Arr, new_shape: tuple) -> Arr:
     pass
@@ -1738,11 +1828,13 @@ def reshape_back(grad_out: Arr, out: Arr, x: Arr, new_shape: tuple) -> Arr:
     return np.reshape(grad_out, x.shape)
 ```
 """)
+    # start
     st.markdown(r"""
 ## `permute`
 
 In NumPy, the equivalent of `torch.permute` is called `np.transpose`, so we will wrap that.
 """)
+    # end
 
     st.markdown(r"""
 ```python
@@ -1757,7 +1849,7 @@ if MAIN:
     tests.test_permute_back(Tensor)
 ```
 """)
-    with st.expander(r"""Help - I'm confused about how to implement this function."""):
+    with st.expander(r"Help - I'm confused about how to implement this function."):
         st.markdown(r"""You should first define the function `invert_transposition`. A docstring is given below:
 
 ```python
@@ -1776,7 +1868,8 @@ def invert_transposition(axes: tuple) -> tuple:
     pass
 ```
 
-Once you've done this, you can define `permute_back` by transposing again, this time with the inversed transposition instructions.""")
+Once you've done this, you can define `permute_back` by transposing again, this time with the inversed transposition instructions.
+""")
 
     with st.expander("Solution"):
         st.markdown(r"""
@@ -1806,15 +1899,22 @@ def permute_back(grad_out: Arr, out: Arr, x: Arr, axes: tuple) -> Arr:
     return np.transpose(grad_out, invert_transposition(axes))
 ```
 """)
+    # start
     st.markdown(r"""
 ## `expand`
-
+""")
+    # end
+    st.markdown(r"""
 Implement your version of `torch.expand`. 
-
+""")
+    # start
+    st.markdown(r"""
 The backward function should just call `unbroadcast`. 
 
 For the forward function, we will use `np.broadcast_to`. This function takes in an array and a target shape, and returns a version of the array broadcasted to the target shape using the rules of broadcasting we discussed in an earlier section. For example:
-
+""")
+    # end
+    st.markdown(r"""
 ```python
 >>> x = np.array([1, 2, 3])
 >>> np.broadcast_to(x, (3, 3))
@@ -1862,10 +1962,11 @@ tests.test_expand_negative_length(Tensor)
 """)
 
 
-    with st.expander(r"""Help - I'm not sure how to construct the shape."""):
+    with st.expander(r"Help - I'm not sure how to construct the shape."):
         st.markdown(r"""If `new_shape` contains no -1s, then you're done. If it does contain -1s, you want to replace those with the appropriate values from `x.shape`.
 
-For example, if `a.shape = (5,)`, and `new_shape = (3, 2, -1)`, you want the actual shape passed into `np.broadcast_to` to be `(3, 2, 5)`. """)
+For example, if `a.shape = (5,)`, and `new_shape = (3, 2, -1)`, you want the actual shape passed into `np.broadcast_to` to be `(3, 2, 5)`. 
+""")
 
     with st.expander("Solution"):
         st.markdown(r"""
@@ -1884,12 +1985,14 @@ def _expand(x: Arr, new_shape) -> Arr:
     return np.broadcast_to(x, shape_non_negative)
 ```
 """)
-
+    # start
     st.markdown(r"""
 ## `sum`
 
 The output can also be smaller than the input, such as when calling `torch.sum`. Implement your own `torch.sum` and `sum_back`.
-
+""")
+    # end
+    st.markdown(r"""
 Note, if you get weird exceptions that you can't explain, and these exceptions don't even go away when you use the solutions provided, this probably means that your implementation of `wrap_forward_fn` was wrong in a way which wasn't picked up by the tests. You should return to this function and try to fix it (or just use the solution).
 
 ```python
@@ -1933,6 +2036,7 @@ def sum_back(grad_out: Arr, out: Arr, x: Arr, dim=None, keepdim=False):
     return np.broadcast_to(grad_out, x.shape)
 ```
 """)
+    # start
     st.markdown(r"""
 ## Indexing
 
@@ -1942,7 +2046,9 @@ We only need two cases today:
 - The index is an integer or tuple of integers.
 - The index is a tuple of (array or Tensor) representing coordinates. Each array is 1D and of equal length. Some coordinates may be repeated. This is [Integer array indexing](https://numpy.org/doc/stable/user/basics.indexing.html#integer-array-indexing).
     - For example, to select the five elements at (0, 0), (1,0), (0, 1), (1, 2), and (0, 0), the index would be the tuple `(np.array([0, 1, 0, 1, 0]), np.array([0, 0, 1, 2, 0]))`. 
-
+""")
+    # end
+    st.markdown(r"""
 Note, in `_getitem` you'll need to deal with one special case: when `index` is of type signature `tuple[Tensor]`. If not for this case, `return x[index]` would suffice for this function. You should define a `coerce_index` function to deal with this particular case; we've provided a docstring for this purpose.
 """)
 
@@ -1981,7 +2087,7 @@ if MAIN:
     tests.test_getitem_integer_tensor(Tensor)
 ```
 """)
-    with st.expander(r"""Help - I'm confused about how to implement getitem_back."""):
+    with st.expander(r"Help - I'm confused about how to implement getitem_back."):
         st.markdown(r"""
 If no coordinates were repeated, we could just assign the grad for each input element to be the grad at the corresponding output position, or 0 if that input element didn't appear.
 
@@ -2017,11 +2123,14 @@ def getitem_back(grad_out: Arr, out: Arr, x: Arr, index: Index):
     return new_grad_out
 ```
 """)
+    # start
     st.markdown(r"""
 ## Elementwise add, subtract, divide
 
 These are exactly analogous to the multiply case. Note that Python and NumPy have the notion of "floor division", which is a truncating integer division as in `7 // 3 = 2`. You can ignore floor division: - we only need the usual floating point division which is called "true division". 
-
+""")
+    # end
+    st.markdown(r"""
 Use lambda functions to define and register the backward functions each in one line. If you're confused, you can click on the expander below to reveal the first one.
 """)
 
@@ -2057,13 +2166,16 @@ BACK_FUNCS.add_back_func(np.true_divide, 0, lambda grad_out, out, x, y: unbroadc
 BACK_FUNCS.add_back_func(np.true_divide, 1, lambda grad_out, out, x, y: unbroadcast(grad_out*(-x/y**2), y))
 ```
 """)
+    # start
     st.markdown(r"""
 ## In-Place Operations
 
 Supporting in-place operations introduces substantial complexity and generally doesn't help performance that much. The problem is that if any of the inputs used in the backward function have been modified in-place since the forward pass, then the backward function will incorrectly calculate using the modified version.
 
 PyTorch will warn you when this causes a problem with the error "RuntimeError: a leaf Variable that requires grad is being used in an in-place operation.".
-
+""")
+    # end
+    st.markdown(r"""
 You can implement the warning in the bonus section but for now your system will silently compute the wrong gradients - user beware!
 
 (note - you don't have to fill anything in here; just run the cell)
@@ -2107,13 +2219,17 @@ if MAIN:
     safe_example()
     unsafe_example()
 ```
-
+""")
+    # start
+    st.markdown(r"""
 ## Mixed scalar-tensor operations
 
 You may have been wondering why our `Tensor` class has to define both `__mul__` and `__rmul__` magic methods.
 
 Without `__rmul__` defined, executing `2 * a` when `a` is a `Tensor` would try to call `2.__mul__(a)`, and the built-in class `int` would be confused about how to handle this. 
-
+""")
+    # end
+    st.markdown(r"""
 Since we have defined `__rmul__` for you at the start, and you implemented multiply to work with floats as arguments, the following should "just work".
 
 ```python
@@ -2125,21 +2241,28 @@ assert a.grad is not None
 assert b.grad is not None
 assert np.allclose(a.grad.array, b.grad.array)
 ```
-
+""")
+    # start
+    st.markdown(r"""
 ## `max`
 
 Since this is an elementwise function, we can think about the scalar case. For scalar $x$, $y$, the derivative for $\max(x, y)$ wrt $x$ is 1 when $x > y$ and 0 when $x < y$. What should happen when $x = y$?
 
 Intuitively, since $\max(x, x)$ is equivalent to the identity function which has a derivative of 1 wrt $x$, it makes sense for the sum of our partial derivatives wrt $x$ and $y$ to also therefore total 1. The convention used by PyTorch is to split the derivative evenly between the two arguments. We will follow this behavior for compatibility, but it's just as legitimate to say it's 1 wrt $x$ and 0 wrt $y$, or some other arbitrary combination that sums to one.
 """)
+    # end
 
-    with st.expander(r"""Help - I'm not sure how to implement this function."""):
-        st.markdown(r"""Try returning `grad_out * bool_sum`, where `bool_sum` is an array constructed from the sum of two boolean arrays.
+    with st.expander(r"Help - I'm not sure how to implement this function."):
+        st.markdown(r"""
+Try returning `grad_out * bool_sum`, where `bool_sum` is an array constructed from the sum of two boolean arrays.
 
-You can alternatively use `np.where`.""")
+You can alternatively use `np.where`.
+""")
 
-    with st.expander(r"""Help - I'm passing the first test but not the second."""):
-        st.markdown(r"""This probably means that you haven't implemented `unbroadcast`. You'll need to do this, to get `grad_out` into the right shape before you use it in `np.where`.""")
+    with st.expander(r"Help - I'm passing the first test but not the second."):
+        st.markdown(r"""
+This probably means that you haven't implemented `unbroadcast`. You'll need to do this, to get `grad_out` into the right shape before you use it in `np.where`.
+""")
 
     st.markdown(r"""
 ```python
@@ -2176,13 +2299,16 @@ def maximum_back1(grad_out: Arr, out: Arr, x: Arr, y: Arr):
     return unbroadcast(grad_out * bool_sum, y)
 ```
 """)
+    # start
     st.markdown(r"""
 ## Functional `ReLU`
 
 A simple and correct ReLU function can be defined in terms of your maximum function. Note the PyTorch version also supports in-place operation, which we are punting on for now.
 
 Again, at $x = 0$ your derivative could reasonably be anything between 0 and 1 inclusive, but we've followed PyTorch in making it 0.5.
-
+""")
+    # end
+    st.markdown(r"""
 ```python
 def relu(x: Tensor) -> Tensor:
     '''Like torch.nn.function.relu(x, inplace=False).'''
@@ -2201,10 +2327,12 @@ def relu(x: Tensor) -> Tensor:
     return maximum(x, 0.0)
 ```
 """)
-
+    # start
     st.markdown(r"""
 ## 2D `matmul`
-
+""")
+    # end
+    st.markdown(r"""
 Implement your version of `torch.matmul`, restricting it to the simpler case where both inputs are 2D.
 """)
 
@@ -2232,9 +2360,11 @@ if MAIN:
 """)
     with st.expander("Help - I'm confused about matmul2d_back!"):
         st.markdown(r"""
-Try working it out on paper, starting from a couple 2x2 matrices. Can you express the answer in terms of another matrix multiply and a transpose?""")
+Try working it out on paper, starting from a couple 2x2 matrices. Can you express the answer in terms of another matrix multiply and a transpose?
+""")
 
     with st.expander("Help - I'm still confused about matmul2d_back (and the hint above didn't help)!"):
+        # start
         st.markdown(r"""
 Let $M = X \times Y$, and let $\text{ grad\_out }$ be the gradient of our root node $L$ wrt $M$, i.e.:
 
@@ -2257,6 +2387,7 @@ In other words, the gradient with respect to `x` is `grad_out @ y.T`.
 
 You can calculate the gradient wrt `y` in a similar way.
 """)
+    # end
     with st.expander("Solution"):
         st.markdown(r"""
 ```python
@@ -2287,7 +2418,7 @@ def section_putting_together():
     </li></ul>
 </ul>
 """, unsafe_allow_html=True)
-
+    # start
     st.markdown(r"""
 # Putting everything together
 
@@ -2295,7 +2426,9 @@ def section_putting_together():
 
 We've now written enough backwards passes that we can go up a layer and write our own `nn.Parameter` and `nn.Module`.
 We don't need much for `Parameter`. It is itself a `Tensor`, shares storage with the provided `Tensor` and requires_grad is `True` by default - that's it!
-
+""")
+    # end
+    st.markdown(r"""
 ```python
 class Parameter(Tensor):
     def __init__(self, tensor: Tensor, requires_grad=True):
@@ -2330,6 +2463,7 @@ class Parameter(Tensor):
         return f"Parameter containing:\n{super().__repr__()}"
 ```
 """)
+    # start
     st.markdown(r"""
 ## Build Your Own `nn.Module`
 
@@ -2338,7 +2472,9 @@ class Parameter(Tensor):
 Implement the indicated methods (i.e. the ones which are currently just `pass`). Note that we've suggested you define dictionaries `_modules` and `_parameters` (this is what the code above the init function means).
 
 Tip: you can bypass `__getattr__` by accessing `self.__dict__` inside a method.
-
+""")
+    # end
+    st.markdown(r"""
 ```python
 class Module:
     _modules: Dict[str, "Module"]
@@ -2480,11 +2616,14 @@ class Module:
         ])
 ```
 """)
+    # start
     st.markdown(r"""
 ## Build Your Own Linear Layer
 
 You may have a `Linear` written already that you can adapt to use our own `Parameter`, `Module`, and `Tensor`. If your `Linear` used `einsum`, use a `matmul` instead. You can implement a backward function for `einsum` in the bonus section.
-
+""")
+    # end
+    st.markdown(r"""
 ```python
 class Linear(Module):
     weight: Parameter
@@ -2587,11 +2726,15 @@ class MLP(Module):
         x = self.output(x)
         return x
 ```
-
+""")
+    # start
+    st.markdown(r"""
 ## Build Your Own Cross-Entropy Loss
 
 Make use of your integer array indexing to implement `cross_entropy`. See the documentation page [here](https://pytorch.org/docs/stable/generated/torch.nn.CrossEntropyLoss.html).
-
+""")
+    # end
+    st.markdown(r"""
 ```python
 def cross_entropy(logits: Tensor, true_labels: Tensor) -> Tensor:
     '''Like torch.nn.functional.cross_entropy with reduction='none'.
@@ -2624,13 +2767,16 @@ def cross_entropy(logits: Tensor, true_labels: Tensor) -> Tensor:
     return -log(exp(true) / exp(logits).sum(1))
 ```
 """)
+    # start
     st.markdown(r"""
 ## `no_grad`
 
 The last thing our backpropagation system needs is the ability to turn it off completely like `torch.no_grad`. 
 
 Below, we have an implementation of the `NoGrad` context manager so that it reads and writes the `grad_tracking_enabled` flag from the top of the file. In general, using mutable global variables is not ideal because multiple threads will be a problem, but we will leave that for another day.
-
+""")
+    # end
+    st.markdown(r"""
 ```python
 class NoGrad:
     '''Context manager that disables grad inside the block. Like torch.no_grad.'''
@@ -2647,6 +2793,7 @@ class NoGrad:
         grad_tracking_enabled = self.was_enabled
 ```
 """)
+    # start
     st.markdown(r"""
 ## Training Your Network
 
@@ -2724,6 +2871,7 @@ if MAIN:
     print(f"\nCompleted in {time.time() - start: .2f}s")
 ```
 """)
+    # end
 
 def section_bonus():
     st.sidebar.markdown(r"""
@@ -2741,9 +2889,8 @@ def section_bonus():
     <li><a class="contents-el" href="#torch-stack"><code>torch.stack</code></a></li>
 </ul>
 """, unsafe_allow_html=True)
-
+    # start
     st.markdown(r"""
-
 # Bonus
 
 Congratulations on finishing the day's main content! Here are a few more bonus things for you to explore.
@@ -2802,17 +2949,31 @@ In the real PyTorch, you can sometimes pass tensors as keyword arguments and dif
 
 So far we've registered a separate backwards for each input argument that could be a Tensor. This is problematic if the function can take any number of tensors like `torch.stack` or `numpy.stack`. Think of and implement the backward function for stack. It may require modification to your other code.
 """)
+    # end
 
 func_list = [section_home, section_intro, section_autograd, section_more_fwd_bwd, section_putting_together, section_bonus]
 
 page_list = ["🏠 Home", "1️⃣ Introduction", "2️⃣ Autograd", "3️⃣ More forward & backward functions", "4️⃣ Putting everything together", "5️⃣ Bonus"]
 page_dict = {name: idx for idx, name in enumerate(page_list)}
 
+if "current_section" not in st.session_state:
+    st.session_state["current_section"] = ["", ""]
+if "current_page" not in st.session_state:
+    st.session_state["current_page"] = ["", ""]
+
 def page():
     with st.sidebar:
         radio = st.radio("Section", page_list)
         st.markdown("---")
-    func_list[page_dict[radio]]()
+    idx = page_dict[radio]
+    func = func_list[idx]
+    func()
+    current_page = r"3_🔩_-_Build_Your_Own_Backprop_Framework"
+    st.session_state["current_section"] = [func.__name__, st.session_state["current_section"][0]]
+    st.session_state["current_page"] = [current_page, st.session_state["current_page"][0]]
+    prepend = parse_text_from_page(current_page, func.__name__)
+    new_section = st.session_state["current_section"][1] != st.session_state["current_section"][0]
+    new_page = st.session_state["current_page"][1] != st.session_state["current_page"][0]
+    chatbot_setup(prepend=prepend, new_section=new_section, new_page=new_page, debug=False)
 
-# if is_local or check_password():
 page()

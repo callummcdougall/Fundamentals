@@ -42,6 +42,7 @@ def section_home():
 Links to Colab: [**exercises**](https://colab.research.google.com/drive/1Wi_SVL8eDYiNcmcmUeF4GfkNfQKT6x3O?usp=sharing), [**solutions**](https://colab.research.google.com/drive/1JfIRCJZ_Fi_WJGneuOKKqF_qsxJfdbfZ?usp=sharing).
 """)
     st_image("stats.png", 350)
+    # start
     st.markdown(r"""
 # Optimization & Hyperparameters
 
@@ -56,8 +57,8 @@ In this section, we'll look at methods for choosing hyperparameters effectively.
 ## 3️⃣ Lambda Labs (bonus)
 
 In this section, you'll be able to practice using Lambda Labs to run larger models. This is handy for when your computer's own GPU just isn't doing the job!
-
 """)
+    # end
 
 def section_optim():
     st.sidebar.markdown(r"""
@@ -89,10 +90,12 @@ def section_optim():
     </ul></li>
 </ul>
 """, unsafe_allow_html=True)
-
+    # start
     st.markdown(r"""
 # Optimizers
-
+""")
+    # end
+    st.markdown(r"""
 ## Imports
 
 ```python
@@ -117,7 +120,9 @@ device = t.device("cuda" if t.cuda.is_available() else "cpu")
 
 MAIN = __name__ == "__main__"
 ```
-
+""")
+    # start
+    st.markdown(r"""
 ## Reading
 
 Some of these are strongly recommended, while others are optional. If you like, you can jump back to some of these videos while you're going through the material, if you feel like you need to.
@@ -137,7 +142,8 @@ Yesterday, you implemented backpropagation. Today, we're going to use the gradie
 """)
 
     st.info(r"""
-Note the conceptual shift here - we're not optimising the parameters of a neural network; we're optimising parameters `(x, y)` which represent coordinates at which we evaluate a function. We're doing this because the image of "loss landscapes" can be very helpful when thinking about the behaviour of different gradient descent algorithms.""")
+Note the conceptual shift here - we're not optimising the parameters of a neural network; we're optimising parameters `(x, y)` which represent coordinates at which we evaluate a function. We're doing this because the image of "loss landscapes" can be very helpful when thinking about the behaviour of different gradient descent algorithms.
+""")
 
     st.markdown(r"""
 A loss function can be any differentiable function such that we prefer a lower value. To apply gradient descent, we start by initializing the parameters to random values (the details of this are subtle), and then repeatedly compute the gradient of the loss with respect to the model parameters. It [can be proven](https://tutorial.math.lamar.edu/Classes/CalcIII/DirectionalDeriv.aspx) that for an infinitesimal step, moving in the direction of the gradient would increase the loss by the largest amount out of all possible directions.
@@ -155,9 +161,11 @@ The biggest disadvantage is that we're completely ignoring the curvature of the 
 Most competing optimizers can be interpreted as trying to do something more sensible for $P$, subject to the constraint that GPU memory is at a premium. In particular, constructing $P$ explicitly is infeasible, since it's an $N \times N$ matrix and N can be hundreds of billions. One idea is to use a diagonal $P$, which only requires N additional memory. An example of a more sophisticated scheme is [Shampoo](https://arxiv.org/pdf/1802.09568.pdf).
 """)
 
-    st.info(r"""The algorithm is called **Shampoo** because you put shampoo on your hair before using conditioner, and this method is a pre-conditioner.
+    st.info(r"""
+The algorithm is called **Shampoo** because you put shampoo on your hair before using conditioner, and this method is a pre-conditioner.
     
-If you take away just one thing from this entire curriculum, please don't let it be this.""")
+If you take away just one thing from this entire curriculum, please don't let it be this.
+""")
 
     st.markdown(r"""
 ## Stochastic Gradient Descent
@@ -201,7 +209,9 @@ Momentum means that the step includes a term proportional to a moving average of
 ## Visualising Optimization With Rosenbrock's Banana
 
 "Rosenbrock's Banana" is a (relatively) famous function that has a simple equation but is challenging to optimize because of the shape of the loss landscape.
-
+""")
+    # end
+    st.markdown(r"""
 We've provided you with a function to calculate Rosenbrock's Banana, and another one to plot arbitrary functions. You can see them both below:
 
 ```python
@@ -324,6 +334,7 @@ Hopefully, you should see output like this:
 Now let's build our own drop-in replacement for these three classes from `torch.optim`. The documentation pages for these algorithms have pseudocode you can use to implement your step method.
 
 """)
+    # start
     st.info(r"""
 **A warning regarding in-place operations**
 
@@ -344,6 +355,7 @@ You MUST use in-place operations in your optimizer because we want the model to 
 
 Note, this observation specifically refers to the parameters. When you're updating non-parameter variables that you're tracking, you should be careful not to accidentally use an in-place operation where you shouldn't!).
 """)
+    # end
 
     st.markdown(r"""
 ### More Tips
@@ -747,15 +759,21 @@ The best results I could find with Adam involved a hyperparams well outside the 
 
 However, it's worth noting that this function is pretty pathological, and in practice Adam generally outperforms SGD in most standard deep learning settings.
 """)
-
+    # start
     st.markdown(r"""
 ## Bonus - parameter groups
 """)
+    # end
     st.error(r"""
 *If you're interested in these exercises then you can go through them, if not then you can move on to the next section (weights and biases).*
 """)
+    # start
     st.markdown(r"""
-Rather than passing a single iterable of parameters into an optimizer, you have the option to pass a list of parameter groups, each one with different hyperparameters. As an example of how this might work:
+Rather than passing a single iterable of parameters into an optimizer, you have the option to pass a list of parameter groups, each one with different hyperparameters. 
+""")
+    # end
+    st.markdown(r"""
+As an example of how this might work:
 
 ```python
 optim.SGD([
@@ -904,6 +922,7 @@ def section_wandb():
     <li><a class="contents-el" href="#the-optimizers-curse">The Optimizer's Curse</a></li>
 </ul>
 """, unsafe_allow_html=True)
+    # start
     st.markdown(r"""
 # Weights and Biases
 
@@ -916,7 +935,9 @@ Note, this page only contains one exercise, and it's relatively short. You're en
 ## CIFAR10
 
 The benchmark we'll be training on is [CIFAR10](https://www.cs.toronto.edu/~kriz/cifar.html), which consists of 60000 32x32 colour images in 10 different classes. Don't peek at what other people online have done for CIFAR10 (it's a common benchmark), because the point is to develop your own process by which you can figure out how to improve your model. Just reading the results of someone else would prevent you from learning how to get the answers. To get an idea of what's possible: using one V100 and a modified ResNet, one entry in the DAWNBench competition was able to achieve 94% test accuracy in 24 epochs and 76 seconds. 94% is approximately [human level performance](http://karpathy.github.io/2011/04/27/manually-classifying-cifar10/).
-
+""")
+    # end
+    st.markdown(r"""
 Below is some boilerplate code for downloading and transforming `CIFAR10` data (this shouldn't take more than a minute to run the first time). There are a few differences between this and our code yesterday week - for instance, we omit the `transforms.Resize` from our `transform` object, because CIFAR10 data is already the correct size (unlike the sample images from last week).
 
 ```python
@@ -936,7 +957,7 @@ utils.show_cifar_images(cifar_trainset, rows=3, cols=5)
 
 We have also provided a basic training & testing loop, almost identical to the one you used yesterday. This one doesn't use `wandb` at all, although it does plot the train loss and test accuracy when the function finishes running. You should run this function to verify your model is working, and that the loss is going down. Also, make sure you understand what each part of this function is doing.
 """)
-
+    # start
     with st.expander("TRAIN FUNCTION - SIMPLE"):
         st.markdown(r"""
 Defining a dataclass to hold the arguments to our training function (just like our `ConvNetTrainingArgs` from the previous exercises):
@@ -955,7 +976,9 @@ class ResNetTrainingArgs():
     filename_save_model: str = "models/part5_resnet.pt"
     subset: int = 1
 ```
-
+""")
+        # end
+        st.markdown(r"""
 Our training function:
 
 ```python
@@ -1016,6 +1039,8 @@ def train_resnet(args: ResNetTrainingArgs) -> Tuple[list, list]:
     t.save(model, args.filename_save_model)
     return loss_list, accuracy_list
 ```
+""")
+        st.markdown(r"""
 
 And an example of running it (we've used `subset=5`, so that the training finishes faster, since we're just giving a basic overview of how it works here).
 
@@ -1039,7 +1064,7 @@ if MAIN:
     ).show()
 ```
 """)
-
+    # start
     st.markdown(r"""
 ## What is Weights and Biases?
 
@@ -1059,6 +1084,7 @@ You should visit the [Weights and Biases homepage](https://wandb.ai/home), and c
 
 The most basic way you can use `wandb` is by logging variables during your run. This removes the need for excessive printing of output. Below is an example training function that does this, which is almost identical to the one we gave above. The only differences (apart from a different model and datasets) are the replacing of our `loss_list` and `accuracy_list` with Weights and Biases functions to track this data.
 """)
+    # end
 
     with st.expander("TRAIN FUNCTION - WANDB LOGGING"):
         st.markdown(r"""
@@ -1137,7 +1163,7 @@ if MAIN:
     train_resnet_wandb(args)
 ```
 """)
-
+    # start
     st.markdown(r"""
 When you run this function, it should give you a url which you can click on to see a graph of parameters plotted over time. You can also switch to a tabular view, which will let you compare multiple runs.
 
@@ -1170,7 +1196,9 @@ This should be called at the very end of your training function. It's not strict
 ## Hyperparameter search
 
 One way to do hyperparameter search is to choose a set of values for each hyperparameter, and then search all combinations of those specific values. This is called **grid search**. The values don't need to be evenly spaced and you can incorporate any knowledge you have about plausible values from similar problems to choose the set of values. Searching the product of sets takes exponential time, so is really only feasible if there are a small number of hyperparameters. I would recommend forgetting about grid search if you have more than 3 hyperparameters, which in deep learning is "always".
-
+""")
+    # end
+    st.markdown(r"""
 A much better idea is for each hyperparameter, decide on a sampling distribution and then on each trial just sample a random value from that distribution. This is called **random search** and back in 2012, you could get a [publication](https://www.jmlr.org/papers/volume13/bergstra12a/bergstra12a.pdf) for this. The diagram below shows the main reason that random search outperforms grid search. Empirically, some hyperparameters matter more than others, and random search benefits from having tried more distinct values in the important dimensions, increasing the chances of finding a "peak" between the grid points.
 """)
 
@@ -1178,11 +1206,14 @@ A much better idea is for each hyperparameter, decide on a sampling distribution
 
     st.markdown(r"""
 It's worth noting that both of these searches are vastly less efficient than gradient descent at finding optima - imagine if you could only train neural networks by randomly initializing them and checking the loss! Either of these search methods without a dose of human (or eventually AI) judgement is just a great way to turn electricity into a bunch of models that don't perform very well.
-
+""")
+    # start
+    st.markdown(r"""
 ## Running hyperparameter sweeps with `wandb`
 
 Now we've come to one of the most impressive features of `wandb` - being able to perform hyperparameter sweeps. Below is a final function which implements hyperparameter sweeps.
 """)
+    # end
 
     with st.expander("TRAIN FUNCTION - WANDB SWEEP"):
         st.markdown(r"""
@@ -1279,7 +1310,7 @@ if MAIN:
     )
 ```
 """)
-
+    # start
     st.markdown(r"""
 There's a lot of extra stuff here, but in fact the core concepts are relatively straightforward. We'll go through the new code line by line.
 
@@ -1325,10 +1356,11 @@ metric:
     goal: maximize
 ```
 """)
-
     st.markdown(r"""
 Note that `wandb.agent`'s arguments include a named function (this is why it was important for our `train` function not to take any arguments), and `count` (which determines how many sweeps will be run before the process terminates). 
-
+""")
+    # end
+    st.markdown(r"""
 When you run the code above, you will be given a url called **Sweep page**, in output that will look like:
 
 ```
@@ -1339,7 +1371,8 @@ This URL will bring you to a page comparing each of your sweeps. You'll be able 
 
 * Bar charts of the [importance](https://docs.wandb.ai/ref/app/features/panels/parameter-importance) (and correlation) of each hyperparameter wrt the target metric. Note that only looking at the correlation could be misleading - something can have a correlation of 1, but still have a very small effect on the metric.
 * A [parallel coordinates plot](https://docs.wandb.ai/ref/app/features/panels/parallel-coordinates), which summarises the relationship between the hyperparameters in your config and the model metric you're optimising.
-
+""")
+    st.markdown(r"""
 ## Some Experiments to Try
 
 Now that you understand how to run training loops, you can spend some time playing around with your model!
@@ -1393,6 +1426,7 @@ def section_lambda():
    <li><a class="contents-el" href="#exercise-use-your-gpu-to-speed-up-training-loops">Exercise - use your GPU to speed up training loops</a></li>
 </ul>
 """, unsafe_allow_html=True)
+    # start
     st.markdown(r"""
 # Lambda Labs
 
@@ -1413,7 +1447,9 @@ Lambda Labs is a service giving you access to higher-quality GPUs than you are l
 
 In later sections of this chapter we'll look at multi-GPU setups, but for now we'll just stick to the basics: setting up a single GPU, and SSHing into it.
 """)
-    st.error(r"""Warning - **Lambda Labs charge by the hour for GPU usage** (the cheaper options are around **$1/hour**). If you use it, make sure you remember to terminate your instances when you're done with them!""")
+    st.error(r"""
+Warning - **Lambda Labs charge by the hour for GPU usage** (the cheaper options are around **$1/hour**). If you use it, make sure you remember to terminate your instances when you're done with them!
+""")
 
     st.markdown(r"""
 ## Instructions for signing up
@@ -1441,10 +1477,12 @@ Having installed the SSH extension, Windows may have automatically created a .ss
 Move your downloaded SSH key into this folder. Then, set permissions on the SSH key (i.e. the `.pem` file):
 		
 * Right click on file, press “Properties”, then go to the “Security” tab.
-* Click “Advanced”, then “Disable inheritance” in the window that pops up.""")
+* Click “Advanced”, then “Disable inheritance” in the window that pops up.
+""")
     st_image("instruction1.png", 500)
     st.markdown(r"""
-* Choose the first option “Convert inherited permissions…”""")
+* Choose the first option “Convert inherited permissions…”
+""")
     st_image("instruction2.png", 500)
     st.markdown(r"""
 * Go back to the “Security” tab, click "Edit" to change permissions, and remove every user except the owner.
@@ -1473,7 +1511,8 @@ Once you finish this process, you should see your GPU instance is running:
 
 ## Set up your config file
 
-Setting up a **config file** remove the need to use long command line arguments, e.g. `ssh -i ~/.ssh/<keyname>.pem ubuntu@instance-ip-address`.""")
+Setting up a **config file** remove the need to use long command line arguments, e.g. `ssh -i ~/.ssh/<keyname>.pem ubuntu@instance-ip-address`.
+""")
 
     st.markdown(f"""Click on the {st_image("vscode-ssh.png", 35, return_html=True)} button in the bottom left, choose "Open SSH Configuration File...", then click <code>C:\\Users\\<user>\\.ssh\\config</code>.""", unsafe_allow_html=True)
 
@@ -1507,7 +1546,8 @@ And there you go - you're all set!
 
 To check your GPU is working, you can open a Python or Notebook file and run `!nvidia-smi`. You should see GPU information which matches the machine you chose from the Lambda Labs website, and is different from the result you get from running this command on your local machine. 
 
-Another way to check out your GPU For instance is to run the PyTorch code `torch.cuda.get_device_name()`. For example, this is what I see after SSHing in:""")
+Another way to check out your GPU For instance is to run the PyTorch code `torch.cuda.get_device_name()`. For example, this is what I see after SSHing in:
+""")
 
     st_image("gpu_type.png", 600)
     st_image("gpu_type_2.png", 450)
@@ -1523,19 +1563,31 @@ You'll also need to choose a Python interpreter. Choose the conda or miniconda o
 
 You can now go back to your ResNet fine-tuning code from earlier sections. How much of a speedup is there? Can you relate this to what you read in [Making Deep Learning Go Brrrr From First Principles](https://horace.io/brrr_intro.html)?
 """)
+    # end
 
 func_list = [section_home, section_optim, section_wandb, section_lambda]
 
 page_list = ["🏠 Home", "1️⃣ Optimizers", "2️⃣ Weights and Biases", "3️⃣ Lambda Labs"]
 page_dict = {name: idx for idx, name in enumerate(page_list)}
 
+if "current_section" not in st.session_state:
+    st.session_state["current_section"] = ["", ""]
+if "current_page" not in st.session_state:
+    st.session_state["current_page"] = ["", ""]
+
 def page():
     with st.sidebar:
-
         radio = st.radio("Section", page_list)
-
         st.markdown("---")
-
-    func_list[page_dict[radio]]()
+    idx = page_dict[radio]
+    func = func_list[idx]
+    func()
+    current_page = r"5_💽_-_Optimization_&_Hyperparameters"
+    st.session_state["current_section"] = [func.__name__, st.session_state["current_section"][0]]
+    st.session_state["current_page"] = [current_page, st.session_state["current_page"][0]]
+    prepend = parse_text_from_page(current_page, func.__name__)
+    new_section = st.session_state["current_section"][1] != st.session_state["current_section"][0]
+    new_page = st.session_state["current_page"][1] != st.session_state["current_page"][0]
+    chatbot_setup(prepend=prepend, new_section=new_section, new_page=new_page, debug=False)
 
 page()
