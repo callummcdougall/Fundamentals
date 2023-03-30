@@ -73,6 +73,7 @@ st.sidebar.markdown(r"""
     <li><a class="contents-el" href="#hints">Hints</a></li>
     <li><a class="contents-el" href="#test-functions">Test functions</a></li>
     <li><a class="contents-el" href="#tips">Tips</a></li>
+    <li><a class="contents-el" href="#feedback">Feedback</a></li>
 </ul>
 """, unsafe_allow_html=True)
 
@@ -183,6 +184,10 @@ Most of the blocks of code will also come with test functions. These are importe
 * To get the most out of these exercises, make sure you understand why all of the assertions should be true, and feel free to add more assertions.
 * If you're having trouble writing a batched computation, try doing the unbatched version first.
 * If you find these exercises challenging, it would be beneficial to go through them a second time so they feel more natural.
+
+## Feedback
+
+If you have any feedback on this course (e.g. bugs, confusing explanations, parts that you feel could be structured better), please let me know using [this Google Form](https://forms.gle/2ZhdHa87wWsrATjh9).
 """)
     # end
 
