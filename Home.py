@@ -80,8 +80,10 @@ st.sidebar.markdown(r"""
 def section_home():
     st_image('prereqs.png', width=600)
     # start
+    st.error(r"""
+Note - these exercises have now been supplanted by [chapter 0](https://arena-ch0-fundamentals.streamlit.app/) of the ARENA material, which covers everything in this page and then some. This page will no longer be updated going forwards.
+""")
     st.markdown(r"""
-
 # Chapter 1: Fundamentals
 
 The material on this page covers the first five days of the curriculum. It can be seen as a grounding in all the fundamentals necessary to complete the more advanced sections of this course (such as RL, transformers, mechanistic interpretability, and generative models).
